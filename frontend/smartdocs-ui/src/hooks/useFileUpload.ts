@@ -2,23 +2,23 @@ import { useCallback, useRef, useState, useEffect } from "react";
 import { uploadFile, type UploadResult } from "../api/api";
 
 /**
- * Default accepted file extensions. (Frontend can visually allow more,
- * but backend currently enforces PDF; hook will validate that at upload time.)
+ * ACCEPT_DEFAULT
+ * Backend is currently PDF-only. Exposing the prop for future compatibility,
+ * but any non-PDF file will be rejected during validation.
  */
-export const ACCEPT_DEFAULT = ".pdf"; // Backend currently supports PDF only
+export const ACCEPT_DEFAULT = ".pdf";
+
+/* -------------------------------------------------------------------------- */
+/* Types                                                                      */
+/* -------------------------------------------------------------------------- */
 
 /**
- * Internal pending upload meta state.
+ * Upload progress state (internal). Kept minimal; estimation removed until implemented.
  */
 export interface PendingMeta {
   progress: number; // 0..1
-  start: number; // performance.now timestamp
-  est: number; // (future use) estimated remaining ms
 }
 
-/**
- * Options accepted by useFileUpload.
- */
 export interface UseFileUploadOptions {
   onUploaded?: (docId: string) => void;
   accept?: string;
@@ -26,63 +26,61 @@ export interface UseFileUploadOptions {
 }
 
 /**
- * Consolidated error shape for the hook.
- */
-export interface UploadHookError {
-  message: string;
-  code?: string;
-}
-
-/**
- * Public API returned by useFileUpload.
+ * Public hook contract returned by useFileUpload.
  */
 export interface UseFileUpload {
-  // Config
   accept: string;
   maxSizeMB: number;
 
-  // Refs
   inputRef: React.RefObject<HTMLInputElement | null>;
 
-  // State
   file: File | null;
   pending: PendingMeta | null;
   successId: string | null;
   error: string;
   dragActive: boolean;
 
-  // Derived
   progress: number;
   isUploading: boolean;
   isFinalizing: boolean;
   canUpload: boolean;
 
-  // Actions
   reset: () => void;
   removeFile: () => void;
   openPicker: () => void;
   startUpload: () => Promise<void>;
+  abortUpload: () => void;
   validateAndSetFile: (f: File | null) => void;
 
-  // DOM Event Handlers (safe to spread)
   handleSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleDrop: (e: React.DragEvent) => void;
   handleDrag: (e: React.DragEvent) => void;
 }
 
+/* -------------------------------------------------------------------------- */
+/* Constants                                                                  */
+/* -------------------------------------------------------------------------- */
+
+const PDF_ONLY_MSG = "Only PDF files are currently supported.";
+
+/* -------------------------------------------------------------------------- */
+/* Hook Implementation                                                        */
+/* -------------------------------------------------------------------------- */
+
 /**
  * useFileUpload
  *
- * Encapsulates:
- * - File selection & validation (size limit)
- * - Drag & drop management
- * - Upload invocation with progress simulation fallback
- * - Success / error state management
- * - Accessibility-ready handlers to be bound to a drop zone
+ * Responsibilities:
+ * - File selection & early validation (size + PDF restriction)
+ * - Drag / drop state management
+ * - Upload initiation with simulated progress fallback
+ * - Success & error state handling
+ * - Abort (logical) to prevent state updates after user cancels
  *
- * The simulated progress covers cases where browsers / network stack
- * fail to emit granular onUploadProgress events; it advances up to 90-98%
- * until real progress updates or completion occurs.
+ * NOTE: Network abort of the underlying request is not implemented yet because
+ * uploadFile currently does not accept a signal. A future enhancement can pass
+ * an AbortSignal into uploadFile / axios config. For now, abortUpload prevents
+ * UI state churn after a user cancels.
  */
 export function useFileUpload(
   options: UseFileUploadOptions = {}
@@ -96,27 +94,38 @@ export function useFileUpload(
   const [successId, setSuccessId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
+  // Track timeouts for simulated progress to ensure cleanup
+  const timeoutsRef = useRef<number[]>([]);
+  // Logical abort flag (prevents late setState after user aborts)
+  const abortedRef = useRef(false);
+
   const reset = useCallback(() => {
+    abortedRef.current = false;
     setFile(null);
     setPending(null);
     setError("");
     setSuccessId(null);
   }, []);
 
-  // Track any timeout IDs so we can cancel simulated progress on unmount / completion
-  const timeoutsRef = useRef<number[]>([]);
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       timeoutsRef.current.forEach((id) => clearTimeout(id));
       timeoutsRef.current = [];
-    };
-  }, []);
+      abortedRef.current = true;
+    },
+    []
+  );
+
+  const clearSimTimers = () => {
+    timeoutsRef.current.forEach((id) => clearTimeout(id));
+    timeoutsRef.current = [];
+  };
 
   const validateAndSetFile = useCallback(
     (f: File | null) => {
       if (!f) return;
+      // Size check
       const sizeMB = f.size / (1024 * 1024);
-      // Early size validation
       if (sizeMB > maxSizeMB) {
         setError(
           `File too large (${sizeMB.toFixed(1)}MB). Max ${maxSizeMB}MB.`
@@ -124,18 +133,15 @@ export function useFileUpload(
         setFile(null);
         return;
       }
-      // Early PDF validation (avoid deferring rejection until upload attempt)
+      // PDF only (backend constraint)
       const isPdf =
         f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf");
       if (!isPdf) {
-        setError(
-          `Only PDF files are currently supported (selected: ${
-            f.type || f.name
-          }).`
-        );
+        setError(`${PDF_ONLY_MSG} (selected: ${f.type || f.name})`);
         setFile(null);
         return;
       }
+
       setError("");
       setSuccessId(null);
       setFile(f);
@@ -178,62 +184,64 @@ export function useFileUpload(
     if (inputRef.current) inputRef.current.value = "";
   }, [reset]);
 
+  const abortUpload = useCallback(() => {
+    abortedRef.current = true;
+    clearSimTimers();
+    setPending(null);
+  }, []);
+
   const startUpload = useCallback(async () => {
     if (!file || pending) return;
+    abortedRef.current = false;
     setError("");
     setSuccessId(null);
 
-    // Back-end currently PDF only.
-    const isPdf =
-      file.type === "application/pdf" ||
-      file.name.toLowerCase().endsWith(".pdf");
-    if (!isPdf) {
-      setError(
-        `Only PDF files are supported by backend (selected: ${
-          file.type || file.name
-        }).`
-      );
-      return;
-    }
-
-    setPending({ progress: 0, start: performance.now(), est: 0 });
+    // File already validated during selection
+    setPending({ progress: 0 });
 
     let gotProgress = false;
+
     const simulateProgress = () => {
+      if (abortedRef.current) return;
       setPending((p) => {
         if (!p || gotProgress) return p;
         const increment = 0.015 + Math.random() * 0.02;
         const next = Math.min(0.9, p.progress + increment);
         return { ...p, progress: next };
       });
-      if (!gotProgress) {
+      if (!gotProgress && !abortedRef.current) {
         const id = window.setTimeout(simulateProgress, 160);
         timeoutsRef.current.push(id);
       }
     };
-    // Initial delay gives real progress events a chance first
+
+    // Give real network progress callbacks a moment first
     const initialId = window.setTimeout(simulateProgress, 300);
     timeoutsRef.current.push(initialId);
 
     try {
       const { id }: UploadResult = await uploadFile(file, (fraction) => {
+        if (abortedRef.current) return;
         gotProgress = true;
+        // Real progress arrived -> clear simulated timers
+        clearSimTimers();
         setPending((p) =>
           p ? { ...p, progress: Math.min(0.98, fraction) } : p
         );
       });
 
-      // finalize bar
+      if (abortedRef.current) return;
+      // Finalize bar then mark success & clear pending for stable post-success state
       setPending((p) => (p ? { ...p, progress: 1 } : p));
-
-      // Allow small visual finalize, then mark success & clear pending (prevents stuck 'Finalizing...')
       const finalizeId = window.setTimeout(() => {
+        if (abortedRef.current) return;
         setSuccessId(id);
         onUploaded?.(id);
-        setPending(null); // clear to re-enable actions
+        setPending(null); // not "finalizing" anymore; success state stable
       }, 120);
       timeoutsRef.current.push(finalizeId);
     } catch (err) {
+      if (abortedRef.current) return;
       console.error("Upload failed", err);
       const detail = (err as Error)?.message || "Upload failed. Try again.";
       setError(detail);
@@ -241,9 +249,10 @@ export function useFileUpload(
     }
   }, [file, pending, onUploaded]);
 
-  const progress = pending?.progress ?? (file ? 0.08 : 0);
+  // Derived
+  const progress = pending?.progress ?? 0;
   const isUploading = !!pending && pending.progress < 1;
-  const isFinalizing = !!pending && pending.progress === 1;
+  const isFinalizing = false; // We clear pending once success is set, so no stuck finalizing state.
   const canUpload = !!file && !pending;
 
   return {
@@ -263,6 +272,7 @@ export function useFileUpload(
     removeFile,
     openPicker,
     startUpload,
+    abortUpload,
     validateAndSetFile,
     handleSelect,
     handleDrop,
