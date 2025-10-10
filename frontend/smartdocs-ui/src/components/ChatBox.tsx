@@ -4,18 +4,8 @@ import { MessageBubble } from "./MessageBubble";
 import {
   useChatStore,
   selectMessages,
-  selectIsLoading,
-  selectError
+  selectIsLoading
 } from "../store/chatStore";
-
-// Type guard for aborted errors (created in api.ts)
-interface AbortedError extends Error {
-  aborted: true;
-}
-function isAbortedError(e: unknown): e is AbortedError {
-  if (typeof e !== "object" || e === null) return false;
-  return (e as { aborted?: unknown }).aborted === true;
-}
 
 interface Props {
   documentId: string | null;
@@ -29,16 +19,12 @@ interface Props {
 export function ChatBox({ documentId }: Props) {
   const messages = useChatStore(selectMessages);
   const isLoading = useChatStore(selectIsLoading);
-  const error = useChatStore(selectError);
   const addUserMessage = useChatStore((s) => s.addUserMessage);
   const addAssistantMessage = useChatStore((s) => s.addAssistantMessage);
   const setLoading = useChatStore((s) => s.setLoading);
-  const setError = useChatStore((s) => s.setError);
-  const clearError = useChatStore((s) => s.clearError);
+  const setError = useChatStore((s) => s.setError); // reserved for future UI surfacing
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const controllerRef = useRef<AbortController | null>(null);
-  const lastQueryRef = useRef<string | null>(null);
   const [input, setInput] = useState("");
 
   // Auto-scroll on new messages / loading state change
@@ -48,31 +34,14 @@ export function ChatBox({ documentId }: Props) {
     }
   }, [messages, isLoading]);
 
-  // Cleanup (abort in-flight request) on unmount
-  useEffect(() => {
-    return () => {
-      if (controllerRef.current) {
-        controllerRef.current.abort();
-      }
-    };
-  }, []);
-
   const handleSend = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || isLoading) return;
     const text = input.trim();
-
-    // Abort prior in-flight request if still running (prevents race conditions)
-    if (isLoading && controllerRef.current) {
-      controllerRef.current.abort();
-    }
-
-    clearError();
     console.debug("[Chat] Sending user message:", text);
     addUserMessage(text);
-    lastQueryRef.current = text;
     setInput("");
 
-    // Dev/test markdown sample command passthrough
+    // Dev/test markdown sample command
     if (text === "/mdtest") {
       console.debug("[Chat] Injecting internal /mdtest markdown sample");
       addAssistantMessage(`# Markdown Rendering Test
@@ -128,54 +97,16 @@ Done.`);
       return;
     }
 
-    const controller = new AbortController();
-    controllerRef.current = controller;
     setLoading(true);
     try {
-      const { answer } = await askQuestion(text, { signal: controller.signal });
+      const { answer } = await askQuestion(text);
       console.debug("[Chat] Backend raw answer (before render):", answer);
       addAssistantMessage(answer);
     } catch (err) {
-      if (!isAbortedError(err)) {
-        console.error("[Chat] askQuestion error:", err);
-        setError(err instanceof Error ? err.message : "Unknown error");
-      } else {
-        console.debug("[Chat] Request aborted");
-      }
+      console.error("[Chat] askQuestion error:", err);
+      setError(err instanceof Error ? err.message : "Unknown error");
+      addAssistantMessage("Error: failed to get an answer. Please retry.");
     } finally {
-      if (controllerRef.current === controller) {
-        controllerRef.current = null;
-      }
-      setLoading(false);
-      textareaRef.current?.focus();
-    }
-  };
-
-  const handleRetry = async () => {
-    if (!lastQueryRef.current) return;
-    // Abort any current request
-    if (isLoading && controllerRef.current) {
-      controllerRef.current.abort();
-    }
-    clearError();
-    const query = lastQueryRef.current;
-    const controller = new AbortController();
-    controllerRef.current = controller;
-    setLoading(true);
-    try {
-      const { answer } = await askQuestion(query, {
-        signal: controller.signal
-      });
-      addAssistantMessage(answer);
-    } catch (err) {
-      if (!isAbortedError(err)) {
-        console.error("[Chat] retry askQuestion error:", err);
-        setError(err instanceof Error ? err.message : "Unknown error");
-      }
-    } finally {
-      if (controllerRef.current === controller) {
-        controllerRef.current = null;
-      }
       setLoading(false);
       textareaRef.current?.focus();
     }
@@ -205,33 +136,6 @@ Done.`);
           </div>
         )}
       </div>
-
-      {error && (
-        <div className="mt-2 px-3 py-2 rounded-md bg-red-900/40 border border-red-700 text-red-300 text-xs flex items-start gap-3">
-          <div className="flex-1">
-            <strong className="block font-semibold mb-0.5">Chat Error</strong>
-            <span className="break-words">{error}</span>
-          </div>
-          <div className="flex flex-col gap-1">
-            <button
-              type="button"
-              onClick={handleRetry}
-              disabled={isLoading}
-              className="text-[0.6rem] px-2 py-1 rounded bg-red-700/60 hover:bg-red-700 disabled:opacity-50"
-            >
-              Retry
-            </button>
-            <button
-              type="button"
-              onClick={() => clearError()}
-              className="text-[0.6rem] px-2 py-1 rounded bg-neutral-700/60 hover:bg-neutral-700"
-            >
-              Dismiss
-            </button>
-          </div>
-        </div>
-      )}
-
       <form
         onSubmit={(e) => {
           e.preventDefault();

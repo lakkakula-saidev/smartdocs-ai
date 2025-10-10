@@ -134,7 +134,13 @@ export function Home() {
         </div>
       </section>
 
-      {/* Page-specific footer removed to rely on global footer in App layout */}
+      {/* Footer */}
+      <footer className="pt-8 border-t border-white/5 text-[0.65rem] text-neutral-500">
+        <p>
+          &copy; {new Date().getFullYear()} SmartDocs AI • Built with React +
+          Vite + Tailwind
+        </p>
+      </footer>
     </div>
   );
 }
