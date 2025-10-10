@@ -368,9 +368,9 @@ from pydantic import BaseModel, Field
 
 class AskRequest(BaseModel):
     query: str = Field(..., description="Natural language question to ask.")
-    document_id: Optional[str] = Field(
-        None,
-        description="Optional document id to scope retrieval. If omitted, last uploaded is used."
+    document_id: str = Field(
+        ...,
+        description="Document id of a previously uploaded PDF. Required for contextual retrieval."
     )
 
 
@@ -444,9 +444,14 @@ async def ask(req: AskRequest):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Query must not be empty."
         )
+    if not req.document_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No document context. Upload a document first and include its id."
+        )
     raw_answer = run_retrieval_qa(req.query, req.document_id)
     enhanced = enhance_markdown(raw_answer)
-    return AskResponse(answer=enhanced, document_id=req.document_id or LAST_DOC_ID)
+    return AskResponse(answer=enhanced, document_id=req.document_id)
 
 
 # ---- Exception Handlers (Optional JSON normalization) ----

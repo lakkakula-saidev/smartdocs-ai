@@ -36,6 +36,12 @@ export function ChatBox({ documentId }: Props) {
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
+    if (!documentId) {
+      addAssistantMessage(
+        "⚠️ Upload a PDF document first to enable contextual answers."
+      );
+      return;
+    }
     const text = input.trim();
     console.debug("[Chat] Sending user message:", text);
     addUserMessage(text);
@@ -99,7 +105,7 @@ Done.`);
 
     setLoading(true);
     try {
-      const { answer } = await askQuestion(text);
+      const { answer } = await askQuestion(text, documentId);
       console.debug("[Chat] Backend raw answer (before render):", answer);
       addAssistantMessage(answer);
     } catch (err) {
@@ -125,7 +131,7 @@ Done.`);
           <p className="text-xs text-neutral-500">
             {documentId
               ? "Start chatting about the uploaded document."
-              : "Ask a question. Uploading a document adds context (optional)."}
+              : "Upload a PDF to enable the chat. Once processed you can ask contextual questions."}
           </p>
         )}
         {isLoading && (
@@ -156,13 +162,18 @@ Done.`);
                 }
               }}
               rows={2}
-              placeholder="Ask a question..."
-              className="w-full resize-none rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 scrollbar-thin"
+              placeholder={
+                documentId
+                  ? "Ask a question about your document..."
+                  : "Upload a document to enable chat..."
+              }
+              disabled={!documentId || isLoading}
+              className="w-full resize-none rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 scrollbar-thin disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
           <button
             type="submit"
-            disabled={!input.trim() || isLoading}
+            disabled={!documentId || !input.trim() || isLoading}
             className="btn disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? "..." : "Send"}

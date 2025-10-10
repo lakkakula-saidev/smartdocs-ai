@@ -1,6 +1,7 @@
 import { useLocation, Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { ChatBox } from "../components/ChatBox";
+import { NoDocumentState } from "../components/NoDocumentState";
 
 interface LocationState {
   docId?: string | null;
@@ -21,13 +22,19 @@ export function Chat() {
         <h1 className="text-2xl font-semibold">Chat</h1>
         <Link to="/" className="text-sm text-brand-400 hover:text-brand-300">← Back</Link>
       </div>
-      {documentId ? (
-        <p className="text-xs text-neutral-500 mb-4">
-          Document context: <code className="text-neutral-300">{documentId}</code>
-        </p>
-      ) : (
-        <p className="text-xs text-neutral-600 mb-4">No document context (demo mode).</p>
+
+      {!documentId && (
+        <NoDocumentState onDocumentUploaded={setDocumentId} />
       )}
+
+      {documentId && (
+        <div className="mb-4">
+          <p className="text-xs text-neutral-500">
+            Document context: <code className="text-neutral-300">{documentId}</code>
+          </p>
+        </div>
+      )}
+
       <div className="flex-1 min-h-0">
         <ChatBox documentId={documentId} />
       </div>

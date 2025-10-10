@@ -129,15 +129,19 @@ export async function uploadFile(
 }
 
 /**
- * Ask a question (document context currently implicit on backend last upload).
- * Returns only { answer } to match existing ChatBox usage, but preserves raw if needed later.
+ * Ask a question.
+ * Document context MUST be explicit; backend no longer falls back silently.
  */
 export async function askQuestion(
-  query: string
+  query: string,
+  documentId: string | null = null
 ): Promise<{ answer: string; raw?: AskResponse }> {
   try {
-    const { data } = await api.post<AskResponse>("/ask", { query });
-    // Use console.debug to allow filtered inspection without polluting production logs.
+    const payload: Record<string, unknown> = { query };
+    if (documentId) {
+      payload.document_id = documentId;
+    }
+    const { data } = await api.post<AskResponse>("/ask", payload);
     console.debug("[api.askQuestion] raw response:", data);
     return { answer: data.answer, raw: data };
   } catch (err) {
