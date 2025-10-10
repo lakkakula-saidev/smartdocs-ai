@@ -88,8 +88,8 @@ export default function App() {
         </nav>
       </header>
 
-      {/* Main routed content */}
-      <main className="flex-1 w-full mx-auto max-w-7xl px-6 md:px-10 py-10 md:py-14">
+      {/* Main routed content (flex column + min-h-0 so nested pages (e.g. Chat) can establish internal scroll without pushing footer) */}
+      <main className="flex-1 min-h-0 flex flex-col w-full mx-auto max-w-7xl px-6 md:px-10 py-10 md:py-14">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/chat" element={<Chat />} />
