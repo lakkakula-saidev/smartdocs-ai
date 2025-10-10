@@ -81,7 +81,8 @@ export const DropZone: React.FC<DropZoneProps> = ({
 }) => {
   // Derive simple booleans for data attributes (helps styling / debugging, satisfies lint for unused vars)
   const hasFile = !!file;
-  const pct = typeof progress === "number" ? Math.max(0, Math.min(1, progress)) : null;
+  const pct =
+    typeof progress === "number" ? Math.max(0, Math.min(1, progress)) : null;
 
   return (
     <div
@@ -118,11 +119,13 @@ export const DropZone: React.FC<DropZoneProps> = ({
 
         <div
           className={[
-            "rounded-xl border-dashed border flex flex-col items-center justify-center gap-3 px-4 py-12 text-center cursor-pointer transition outline-none",
+            "rounded-xl border-dashed border flex flex-col items-center justify-center gap-3 px-4 py-12 text-center cursor-pointer transition",
             dragActive
               ? "border-brand-400 bg-brand-600/5"
               : "border-neutral-700/60 hover:border-brand-500/40 bg-neutral-950/40",
-            disabled ? "opacity-60 pointer-events-none" : ""
+            disabled ? "opacity-60 pointer-events-none" : "",
+            // Accessible focus outline (removed outline-none; provide custom ring)
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-900"
           ].join(" ")}
           role="button"
           tabIndex={0}
@@ -139,6 +142,8 @@ export const DropZone: React.FC<DropZoneProps> = ({
             }
           }}
           data-drag-active={dragActive ? "true" : "false"}
+          aria-live="polite"
+          aria-atomic="true"
         >
           <input
             ref={inputRef}
@@ -198,14 +203,16 @@ export const DropZone: React.FC<DropZoneProps> = ({
         </div>
 
         {/* Optional ARIA status region consumer can drive */}
-        {ariaStatus && (
+        {(ariaStatus || dragActive) && (
           <p
             className="sr-only"
             role="status"
             aria-live="polite"
             aria-atomic="true"
           >
-            {ariaStatus}
+            {dragActive
+              ? "Drag active. Release to select file."
+              : ariaStatus || ""}
           </p>
         )}
       </div>

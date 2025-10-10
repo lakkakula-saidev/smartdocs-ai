@@ -1,12 +1,11 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, useEffect } from "react";
 import { uploadFile, type UploadResult } from "../api/api";
 
 /**
  * Default accepted file extensions. (Frontend can visually allow more,
  * but backend currently enforces PDF; hook will validate that at upload time.)
  */
-export const ACCEPT_DEFAULT =
-  ".pdf,.txt,.md,.mdx,.csv,.json,.doc,.docx,.ppt,.pptx,.rtf";
+export const ACCEPT_DEFAULT = ".pdf"; // Backend currently supports PDF only
 
 /**
  * Internal pending upload meta state.
@@ -104,13 +103,35 @@ export function useFileUpload(
     setSuccessId(null);
   }, []);
 
+  // Track any timeout IDs so we can cancel simulated progress on unmount / completion
+  const timeoutsRef = useRef<number[]>([]);
+  useEffect(() => {
+    return () => {
+      timeoutsRef.current.forEach((id) => clearTimeout(id));
+      timeoutsRef.current = [];
+    };
+  }, []);
+
   const validateAndSetFile = useCallback(
     (f: File | null) => {
       if (!f) return;
       const sizeMB = f.size / (1024 * 1024);
+      // Early size validation
       if (sizeMB > maxSizeMB) {
         setError(
           `File too large (${sizeMB.toFixed(1)}MB). Max ${maxSizeMB}MB.`
+        );
+        setFile(null);
+        return;
+      }
+      // Early PDF validation (avoid deferring rejection until upload attempt)
+      const isPdf =
+        f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf");
+      if (!isPdf) {
+        setError(
+          `Only PDF files are currently supported (selected: ${
+            f.type || f.name
+          }).`
         );
         setFile(null);
         return;
@@ -181,14 +202,18 @@ export function useFileUpload(
     const simulateProgress = () => {
       setPending((p) => {
         if (!p || gotProgress) return p;
-        const next = Math.min(0.9, p.progress + 0.015 + Math.random() * 0.02);
+        const increment = 0.015 + Math.random() * 0.02;
+        const next = Math.min(0.9, p.progress + increment);
         return { ...p, progress: next };
       });
       if (!gotProgress) {
-        setTimeout(simulateProgress, 160);
+        const id = window.setTimeout(simulateProgress, 160);
+        timeoutsRef.current.push(id);
       }
     };
-    setTimeout(simulateProgress, 300);
+    // Initial delay gives real progress events a chance first
+    const initialId = window.setTimeout(simulateProgress, 300);
+    timeoutsRef.current.push(initialId);
 
     try {
       const { id }: UploadResult = await uploadFile(file, (fraction) => {
@@ -200,10 +225,14 @@ export function useFileUpload(
 
       // finalize bar
       setPending((p) => (p ? { ...p, progress: 1 } : p));
-      setTimeout(() => {
+
+      // Allow small visual finalize, then mark success & clear pending (prevents stuck 'Finalizing...')
+      const finalizeId = window.setTimeout(() => {
         setSuccessId(id);
         onUploaded?.(id);
+        setPending(null); // clear to re-enable actions
       }, 120);
+      timeoutsRef.current.push(finalizeId);
     } catch (err) {
       console.error("Upload failed", err);
       const detail = (err as Error)?.message || "Upload failed. Try again.";
