@@ -1,0 +1,209 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base layer extensions */
+@layer base {
+  :root {
+    --grid-color: 32 40 56;
+    --gradient-start: 43 165 255;
+    --gradient-mid: 131 216 255;
+    --gradient-end: 0 60 120;
+  }
+
+  html {
+    @apply antialiased scroll-smooth;
+  }
+
+  body {
+    @apply bg-neutral-950 text-neutral-100 min-h-screen font-sans;
+    background-image: radial-gradient(
+        circle at 25% 15%,
+        rgba(var(--gradient-start) / 0.12),
+        transparent 60%
+      ),
+      radial-gradient(
+        circle at 85% 70%,
+        rgba(var(--gradient-mid) / 0.1),
+        transparent 65%
+      ),
+      linear-gradient(
+        to bottom right,
+        #0d1117,
+        #0b0e13 35%,
+        #0d1620 70%,
+        #0b1f30
+      );
+  }
+
+  ::selection {
+    @apply bg-brand-600/60 text-white;
+  }
+
+  a {
+    @apply text-brand-400 hover:text-brand-300 transition-colors;
+  }
+
+  code,
+  pre {
+    @apply font-mono text-[0.85rem] bg-neutral-900/70 rounded px-1 py-0.5;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply tracking-tight font-semibold;
+  }
+}
+
+/* Scrollbars (webkit) */
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-neutral-700 rounded;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    @apply bg-neutral-600;
+  }
+}
+
+/* Component examples & design system tokens */
+@layer components {
+  .btn {
+    @apply inline-flex items-center gap-2 rounded-md bg-brand-600 hover:bg-brand-500 active:bg-brand-600/90
+      px-4 py-2 text-sm font-medium text-white transition shadow-soft shadow-brand-600/20
+      focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/60;
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center gap-2 rounded-md border border-brand-600/60 text-brand-300
+      hover:bg-brand-600/10 px-4 py-2 text-sm font-medium transition;
+  }
+
+  .card {
+    @apply rounded-xl border border-white/5 bg-neutral-900/60 backdrop-blur-sm p-6 shadow-soft
+      hover:shadow-brand-glow transition-shadow;
+  }
+
+  .badge {
+    @apply inline-flex items-center rounded-md px-2 py-0.5 text-[0.65rem] font-medium tracking-wide
+      bg-brand-600/15 text-brand-300 ring-1 ring-inset ring-brand-500/30;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-brand-400 via-brand-300 to-brand-500 bg-clip-text text-transparent;
+  }
+
+  .hero-grid {
+    background-image: linear-gradient(#0d1117, #0d1117),
+      radial-gradient(
+        circle at 50% 50%,
+        rgba(var(--gradient-start) / 0.18),
+        transparent 65%
+      );
+    background-attachment: fixed;
+  }
+
+  .fade-in {
+    @apply animate-fade-in;
+  }
+  .slide-up {
+    @apply animate-slide-up;
+  }
+}
+
+/* Layout helpers */
+@layer utilities {
+  .layout-base {
+    @apply relative max-w-7xl mx-auto px-6 md:px-10;
+  }
+  .surface {
+    @apply bg-neutral-900/60 backdrop-blur-sm border border-white/5;
+  }
+}
+
+/* Markdown specific refinements for chat bubbles */
+@layer components {
+  .markdown-body {
+    @apply space-y-2;
+  }
+  .markdown-body p {
+    @apply leading-relaxed;
+  }
+  .markdown-body h1,
+  .markdown-body h2,
+  .markdown-body h3 {
+    @apply font-semibold tracking-tight;
+  }
+  .markdown-body h1 {
+    @apply text-lg text-brand-300 mt-2 mb-1;
+  }
+  .markdown-body h2 {
+    @apply text-base text-brand-300 mt-2 mb-1;
+  }
+  .markdown-body h3 {
+    @apply text-sm text-brand-200 mt-2 mb-1;
+  }
+
+  .markdown-body ul,
+  .markdown-body ol {
+    @apply my-2 pl-5 space-y-1;
+  }
+
+  .markdown-body ul {
+    list-style: disc;
+  }
+  .markdown-body ol {
+    list-style: decimal;
+  }
+
+  .markdown-body li {
+    @apply leading-snug;
+  }
+
+  .markdown-body blockquote {
+    @apply border-l-4 border-brand-600/70 pl-3 ml-0 my-2 text-neutral-300 italic;
+  }
+
+  .markdown-body code {
+    @apply font-mono text-[0.75rem] bg-neutral-900/70 rounded px-1 py-0.5 border border-neutral-700/40;
+  }
+
+  .markdown-body pre code {
+    @apply bg-transparent border-0 p-0;
+  }
+
+  .markdown-body pre {
+    @apply my-2 rounded-md border border-neutral-700/60 bg-neutral-900/70 overflow-auto px-0 py-0;
+  }
+
+  .markdown-body table {
+    @apply w-full text-xs border-separate border-spacing-0 my-3;
+  }
+
+  .markdown-body thead {
+    @apply bg-neutral-700/30 text-neutral-200;
+  }
+
+  .markdown-body th,
+  .markdown-body td {
+    @apply px-2 py-1 border border-neutral-700/60 align-top;
+  }
+
+  .markdown-body hr {
+    @apply my-3 border-neutral-700/60;
+  }
+
+  .markdown-body a {
+    @apply underline decoration-brand-500/60 underline-offset-2 hover:text-brand-300;
+  }
+}

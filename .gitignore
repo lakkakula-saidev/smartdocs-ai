@@ -1,0 +1,193 @@
+# Root .gitignore for Node.js/React frontend + Python/FastAPI backend
+
+############################
+# Node.js / React
+############################
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm/
+.pnpm-store/
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# Package manager lock files (intentionally ignored per project policy)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Build / output directories
+build/
+dist/
+out/
+.next/
+.parcel-cache/
+.turbo/
+.cache/
+coverage/
+coverage-*
+*.tsbuildinfo
+
+# Storybook
+storybook-static/
+
+# Misc tooling
+.eslintcache
+
+############################
+# Python / FastAPI
+############################
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+env.bak/
+venv.bak/
+.env/
+
+# Distribution / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+*.egg
+MANIFEST
+
+# PyInstaller
+*.spec
+
+# Unit test / coverage
+.pytest_cache/
+.hypothesis/
+.coverage
+.coverage.*
+htmlcov/
+nosetests.xml
+coverage.xml
+test-results/
+
+# Type checking / linting
+.mypy_cache/
+.pyre/
+.ruff_cache/
+
+# Task / env managers
+.tox/
+.nox/
+
+############################
+# Environment & secrets
+############################
+.env
+.env.*
+!.env.example
+!*.example
+.python-version
+
+############################
+# Logs & runtime
+############################
+logs/
+*.log
+pip-log.txt
+pip-delete-this-directory.txt
+celerybeat-schedule
+celerybeat.pid
+*.pid
+
+############################
+# Databases / storage
+############################
+*.sqlite
+*.sqlite3
+*.db
+db.sqlite3
+data/
+uploads/
+media/
+
+############################
+# Certificates / keys
+############################
+*.pem
+*.key
+*.crt
+*.pfx
+
+############################
+# Temporary & caches
+############################
+tmp/
+temp/
+*.tmp
+node_modules/.cache/
+.sass-cache/
+
+############################
+# Docker (local overrides)
+############################
+docker-compose.override.yml
+
+############################
+# IDE / Editor
+############################
+.vscode/
+.idea/
+*.iml
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+
+############################
+# OS files
+############################
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+__MACOSX/
+Thumbs.db
+ehthumbs.db
+
+############################
+# Misc
+############################
+*.bak
+*.orig
+*.rej
+
+############################
+# Local tooling override examples (uncomment if needed)
+############################
+# .env.development.local
+# .env.test.local
+# .env.production.local
+
+############################
+# End of file
+############################
