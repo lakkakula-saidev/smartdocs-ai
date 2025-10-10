@@ -17,7 +17,9 @@ interface Props {
  * - Uses store.isLoading instead of local 'sending'.
  */
 export function ChatBox({ documentId }: Props) {
-  const messages = useChatStore(selectMessages);
+  // Pull ALL persisted messages, but only show them when a document is active.
+  const allMessages = useChatStore(selectMessages);
+  const messages = documentId ? allMessages : [];
   const isLoading = useChatStore(selectIsLoading);
   const addUserMessage = useChatStore((s) => s.addUserMessage);
   const addAssistantMessage = useChatStore((s) => s.addAssistantMessage);

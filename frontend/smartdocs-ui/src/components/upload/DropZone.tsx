@@ -109,7 +109,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
             <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-brand-600/20 text-brand-300 text-xs font-bold ring-1 ring-inset ring-brand-500/30">
               1
             </span>
-            Upload a Document
+            Upload a Document to interact
           </h2>
           <p className="text-[0.7rem] md:text-xs text-neutral-400 leading-relaxed max-w-prose">
             Drag and drop a file or browse from your device. Once uploaded, you
