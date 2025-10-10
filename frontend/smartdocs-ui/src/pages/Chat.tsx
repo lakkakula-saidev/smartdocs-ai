@@ -16,7 +16,8 @@ export function Chat() {
   }, [state.docId]);
 
   return (
-    <div className="flex flex-col h-full max-h-[calc(100vh-5rem)]">
+    <div className="flex flex-col flex-1 min-h-0">
+      {/* Wrapper: flex-1 + min-h-0 ensures internal chat scroll area does not push global footer */}
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-semibold">Chat</h1>
         <Link to="/" className="text-sm text-brand-400 hover:text-brand-300">← Back</Link>
