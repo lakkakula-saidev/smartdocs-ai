@@ -32,7 +32,6 @@ interface ChatState {
   clearChat: () => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
-  clearError: () => void;
 }
 
 // Helper to generate ids (falls back if crypto unavailable)
@@ -113,8 +112,7 @@ export const useChatStore = create<ChatState>()(
           ),
         setLoading: (loading) =>
           set(() => ({ isLoading: loading }), false, "chat/setLoading"),
-        setError: (error) => set(() => ({ error }), false, "chat/setError"),
-        clearError: () => set(() => ({ error: null }), false, "chat/clearError")
+        setError: (error) => set(() => ({ error }), false, "chat/setError")
       }),
       {
         name: "chat-storage",
