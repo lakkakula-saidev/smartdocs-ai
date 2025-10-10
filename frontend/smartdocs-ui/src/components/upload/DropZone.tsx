@@ -142,8 +142,6 @@ export const DropZone: React.FC<DropZoneProps> = ({
             }
           }}
           data-drag-active={dragActive ? "true" : "false"}
-          aria-live="polite"
-          aria-atomic="true"
         >
           <input
             ref={inputRef}
