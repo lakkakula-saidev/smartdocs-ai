@@ -33,11 +33,13 @@ interface ServerUploadResponse {
   document_id: string;
   chunks: number;
   bytes: number;
+  title: string;
 }
 
 export interface UploadResult {
   documentId: string;
   id: string; // backward alias
+  title: string;
   chunks?: number;
   bytes?: number;
   raw?: ServerUploadResponse;
@@ -86,6 +88,7 @@ function normalizeUploadResponse(data: ServerUploadResponse): UploadResult {
   return {
     documentId,
     id: documentId,
+    title: data?.title || "Document",
     chunks: data?.chunks,
     bytes: data?.bytes,
     raw: data

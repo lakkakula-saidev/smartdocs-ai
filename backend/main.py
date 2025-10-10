@@ -201,6 +201,123 @@ def build_and_store_embeddings(document_id: str, text: str):
         )
 
 
+def generate_document_title(raw_text: str, fallback: str) -> str:
+    """
+    Improved title generation with stronger heuristics to avoid picking section
+    headings like 'Abstract', 'Introduction', or author name lines.
+
+    Process:
+      1. Heuristically collect candidate lines near start of document.
+      2. Filter out boilerplate / stop headings / likely author lines.
+      3. Provide only the filtered list + fallback to the LLM with strict rules.
+      4. Post-process (single line, <= 80 chars, strip quotes). Never raise.
+
+    This greatly reduces chances of returning a section heading instead of the real title.
+    """
+    base = (fallback or "").strip()[:120] or "Document"
+    text = raw_text or ""
+    if not text.strip():
+        return base
+
+    # Collect early lines (first 80 lines / 6000 chars) to search for title
+    early_block = text.splitlines()[:80]
+    STOP_TERMS = {
+        "abstract", "introduction", "table of contents", "contents",
+        "acknowledgments", "acknowledgements", "references", "index",
+        "copyright", "license", "licence"
+    }
+
+    candidates: list[str] = []
+    for ln in early_block:
+        s = ln.strip()
+        if not s:
+            continue
+        if len(s) < 8 or len(s) > 120:
+            continue
+        lower = s.lower()
+        # Skip stop terms or lines that are exactly a stop term
+        if lower in STOP_TERMS:
+            continue
+        # Skip obvious section headers ending with ':' or all uppercase single words
+        if s.endswith(":"):
+            continue
+        # Skip lines that look like just author names (contain commas and no verbs, heuristic)
+        if len(s.split()) <= 8 and "," in s and any(ch.isalpha() for ch in s):
+            continue
+        # Skip lines that are mostly names pattern (multiple capitalized words w/o other chars)
+        words = s.split()
+        capital_like = sum(1 for w in words if w[:1].isupper())
+        if capital_like >= len(words) - 1 and len(words) > 2 and len(words) <= 8 and all(w.isalpha() for w in words):
+            # Likely a list of names
+            continue
+        # Skip lines that are known section markers
+        if lower.startswith("by ") or lower.startswith("author"):
+            continue
+        candidates.append(s)
+
+    # Deduplicate while preserving order
+    seen = set()
+    filtered_candidates = []
+    for c in candidates:
+        key = c.lower()
+        if key not in seen:
+            seen.add(key)
+            filtered_candidates.append(c)
+
+    # If we ended up empty, fall back directly
+    if not filtered_candidates:
+        return base
+
+    # Truncate candidate list to keep prompt small
+    filtered_candidates = filtered_candidates[:8]
+
+    try:
+        try:
+            from langchain_openai import ChatOpenAI
+        except ImportError:
+            from langchain.chat_models import ChatOpenAI  # legacy fallback
+        api_key = require_openai_api_key()
+        llm = ChatOpenAI(
+            model_name="gpt-4o-mini",
+            temperature=0.0,
+            openai_api_key=api_key,
+        )
+
+        candidate_block = "\n".join(f"- {c}" for c in filtered_candidates)
+
+        prompt = (
+            "You are an assistant that selects the BEST document TITLE from a candidate list.\n"
+            "Rules STRICTLY:\n"
+            "1. Output ONLY the chosen title text (no quotes, no extra words).\n"
+            "2. Prefer the candidate that describes the overall subject, not 'Abstract', 'Introduction', author names, or section labels.\n"
+            "3. If none are better than the fallback, return the fallback.\n"
+            "4. Max 12 words, <= 80 chars.\n"
+            f"Fallback Title: {base}\n"
+            "Candidate Lines:\n"
+            f"{candidate_block}\n"
+            "Chosen Title:"
+        )
+        resp = llm.invoke(prompt)
+        candidate = getattr(resp, "content", "") or ""
+        title_line = candidate.splitlines()[0].strip()
+
+        # Post-processing
+        if not title_line:
+            return base
+        # Strip enclosing quotes
+        if (title_line.startswith('"') and title_line.endswith('"')) or (
+            title_line.startswith("'") and title_line.endswith("'")
+        ):
+            title_line = title_line[1:-1].strip()
+        if not title_line:
+            return base
+        if len(title_line) > 80:
+            title_line = title_line[:80].rstrip()
+        return title_line
+    except Exception:
+        return base
+
+
 def get_vectorstore(document_id: Optional[str]) -> Any:
     """Retrieve a vector store by explicit id or fallback to last uploaded."""
     if document_id and document_id in VECTOR_STORES:
@@ -210,7 +327,6 @@ def get_vectorstore(document_id: Optional[str]) -> Any:
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Document ID not found."
         )
-    # fallback
     if LAST_DOC_ID and LAST_DOC_ID in VECTOR_STORES:
         return VECTOR_STORES[LAST_DOC_ID]["vectorstore"]
     raise HTTPException(
@@ -383,6 +499,7 @@ class UploadResponse(BaseModel):
     document_id: str
     chunks: int
     bytes: int
+    title: str
 
 
 class HealthResponse(BaseModel):
@@ -424,6 +541,17 @@ async def upload_pdf(file: UploadFile = File(...)):
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="No extractable text found in PDF."
             )
+        # Derive heuristic base title (filename stem + first reasonable line)
+        filename_stem = os.path.splitext(file.filename)[0].strip() or "Document"
+        candidate_lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+        first_reasonable = next(
+            (ln for ln in candidate_lines if 5 <= len(ln) <= 120),
+            filename_stem
+        )
+        base_title = first_reasonable[:120]
+        # LLM refinement (robust fallback to base_title)
+        title = generate_document_title(text, base_title)
+
         document_id = uuid.uuid4().hex
         build_and_store_embeddings(document_id, text)
         # Count chunks from stored vectorstore (metadata not always directly accessible; approximate)
@@ -431,7 +559,8 @@ async def upload_pdf(file: UploadFile = File(...)):
         return UploadResponse(
             document_id=document_id,
             chunks=chunks,
-            bytes=len(text.encode("utf-8"))
+            bytes=len(text.encode("utf-8")),
+            title=title
         )
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
