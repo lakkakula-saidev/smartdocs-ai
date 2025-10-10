@@ -89,7 +89,7 @@ export default function App() {
       </header>
 
       {/* Main routed content */}
-      <main className="flex flex-col flex-1 min-h-0 w-full mx-auto max-w-7xl px-6 md:px-10 py-6 md:py-10">
+      <main className="flex-1 w-full mx-auto max-w-7xl px-6 md:px-10 py-10 md:py-14">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/chat" element={<Chat />} />

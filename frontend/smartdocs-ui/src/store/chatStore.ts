@@ -34,17 +34,6 @@ interface ChatState {
   setError: (error: string | null) => void;
 }
 
-// Build-scoped persistence (reset on each dev server restart)
-// Injected by Vite via define in vite.config.ts
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-declare const __BUILD_ID__: string;
-
-const STORAGE_BASE_NAME = "chat-storage";
-const BUILD_ID = typeof __BUILD_ID__ !== "undefined" ? __BUILD_ID__ : "prod";
-const PERSIST_NAME = import.meta.env.DEV
-  ? `${STORAGE_BASE_NAME}-${BUILD_ID}`
-  : STORAGE_BASE_NAME;
-
 // Helper to generate ids (falls back if crypto unavailable)
 const genId = () => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -126,7 +115,7 @@ export const useChatStore = create<ChatState>()(
         setError: (error) => set(() => ({ error }), false, "chat/setError")
       }),
       {
-        name: PERSIST_NAME,
+        name: "chat-storage",
         version: 2,
         storage: createJSONStorage(() => localStorage),
         migrate: (state: unknown, version) => {

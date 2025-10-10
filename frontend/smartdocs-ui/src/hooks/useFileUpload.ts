@@ -20,12 +20,7 @@ export interface PendingMeta {
 }
 
 export interface UseFileUploadOptions {
-  /**
-   * Called after successful upload.
-   * @param docId backend-assigned document id
-   * @param meta optional extra metadata (e.g. title)
-   */
-  onUploaded?: (docId: string, meta?: { title?: string }) => void;
+  onUploaded?: (docId: string) => void;
   accept?: string;
   maxSizeMB?: number;
 }
@@ -225,18 +220,15 @@ export function useFileUpload(
     timeoutsRef.current.push(initialId);
 
     try {
-      const { id, title: backendTitle }: UploadResult = await uploadFile(
-        file,
-        (fraction) => {
-          if (abortedRef.current) return;
-          gotProgress = true;
-          // Real progress arrived -> clear simulated timers
-          clearSimTimers();
-          setPending((p) =>
-            p ? { ...p, progress: Math.min(0.98, fraction) } : p
-          );
-        }
-      );
+      const { id }: UploadResult = await uploadFile(file, (fraction) => {
+        if (abortedRef.current) return;
+        gotProgress = true;
+        // Real progress arrived -> clear simulated timers
+        clearSimTimers();
+        setPending((p) =>
+          p ? { ...p, progress: Math.min(0.98, fraction) } : p
+        );
+      });
 
       if (abortedRef.current) return;
       // Finalize bar then mark success & clear pending for stable post-success state
@@ -244,24 +236,7 @@ export function useFileUpload(
       const finalizeId = window.setTimeout(() => {
         if (abortedRef.current) return;
         setSuccessId(id);
-        // Prefer backend-provided title; fallback to filename stem.
-        let derived: string | undefined;
-        if (file) {
-          derived =
-            file.name
-              .replace(/\.[^.]+$/, "")
-              .slice(0, 120)
-              .trim() || file.name;
-        }
-        const finalTitle = backendTitle || derived;
-        try {
-          if (finalTitle) {
-            localStorage.setItem(`docTitle:${id}`, finalTitle);
-          }
-        } catch {
-          /* non-fatal storage failure */
-        }
-        onUploaded?.(id, { title: finalTitle });
+        onUploaded?.(id);
         setPending(null); // not "finalizing" anymore; success state stable
       }, 120);
       timeoutsRef.current.push(finalizeId);
