@@ -132,16 +132,34 @@ export async function uploadFile(
  * Ask a question (document context currently implicit on backend last upload).
  * Returns only { answer } to match existing ChatBox usage, but preserves raw if needed later.
  */
+/**
+ * Ask a question (document context currently implicit on backend last upload).
+ * Added optional AbortSignal to support in-flight request cancellation
+ * preventing race conditions when users dispatch rapid successive queries.
+ */
 export async function askQuestion(
-  query: string
+  query: string,
+  options?: { signal?: AbortSignal }
 ): Promise<{ answer: string; raw?: AskResponse }> {
   try {
-    const { data } = await api.post<AskResponse>("/ask", { query });
-    // Use console.debug to allow filtered inspection without polluting production logs.
+    const { data } = await api.post<AskResponse>(
+      "/ask",
+      { query },
+      {
+        signal: options?.signal
+      }
+    );
     console.debug("[api.askQuestion] raw response:", data);
     return { answer: data.answer, raw: data };
   } catch (err) {
     const ax = err as AxiosError<BackendErrorShape>;
+    // Axios uses code ERR_CANCELED on abort; surface a specialized error so caller can branch.
+    if (ax.code === "ERR_CANCELED") {
+      const aborted = Object.assign(new Error("Request aborted"), {
+        aborted: true as const
+      });
+      throw aborted;
+    }
     const detail = extractErrorDetail(ax, "Query failed.");
     throw new Error(detail);
   }
