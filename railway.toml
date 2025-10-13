@@ -1,0 +1,17 @@
+# Railway configuration (minimal) for SmartDocs AI backend
+# Targets backend/ subdirectory Dockerfile in monorepo
+
+[build]
+dockerfilePath = "backend/Dockerfile"
+context = "backend"
+
+[deploy]
+# Use Dockerfile CMD (uvicorn); minimal restart policy
+restartPolicyType = "ON_FAILURE"
+
+[[services]]
+name = "backend"
+rootDirectory = "backend"
+# No buildCommand/startCommand needed; Docker image handles start
+
+# After commit & push: Railway → Redeploy to pick up railway.toml
