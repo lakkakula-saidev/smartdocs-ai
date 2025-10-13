@@ -44,16 +44,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
-          # Removed cache-dependency-path because lockfile intentionally not committed (ignored).
-          # setup-node will still attempt a generic npm cache.
+        # Removed caching because repository intentionally omits lockfiles; setup-node cache requires a lockfile.
 
       - name: Show lockfile status
         run: |
           if [ -f package-lock.json ]; then
             echo "package-lock.json present"
           else
-            echo "No package-lock.json (using npm install fallback)"
+            echo "No package-lock.json (proceeding without npm cache)"
           fi
 
       - name: Install dependencies
@@ -99,4 +97,4 @@ jobs:
 # 3. For user/organization root sites (username.github.io) set GITHUB_PAGES_PROJECT to "false".
 # 4. To enable source maps temporarily set BUILD_SOURCEMAP to true (avoid for routine production).
 # 5. Vite base path auto-derived from repo name when GITHUB_PAGES_PROJECT=true (see vite.config.ts).
-# 6. Lockfile intentionally excluded; workflow adapts (npm install). Add a lockfile + remove fallback for reproducible builds later.
+# 6. Lockfile intentionally excluded; add one (npm shrinkwrap / package-lock) and re-enable caching for reproducible installs later.
