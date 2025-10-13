@@ -32,13 +32,8 @@ RUN pip install --no-cache-dir --upgrade pip \
 # Stage 2: Production stage
 FROM python:3.12-slim as production
 
-# Install only runtime dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpoppler-cpp0v5 \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean \
-    # Create non-root user (same as base stage)
-    && groupadd --gid 1000 appuser \
+# Runtime stage setup (no extra system PDF libs needed; pypdf is pure Python)
+RUN groupadd --gid 1000 appuser \
     && useradd --uid 1000 --gid appuser --shell /bin/bash --create-home appuser
 
 # Set working directory
