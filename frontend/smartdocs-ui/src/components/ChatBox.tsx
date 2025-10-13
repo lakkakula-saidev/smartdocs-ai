@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { askQuestion } from "../api/api";
 import { MessageBubble } from "./MessageBubble";
 import {
@@ -19,7 +19,11 @@ interface Props {
 export function ChatBox({ documentId }: Props) {
   // Pull ALL persisted messages, but only show them when a document is active.
   const allMessages = useChatStore(selectMessages);
-  const messages = documentId ? allMessages : [];
+  // Memoize derived messages to keep stable reference when documentId unchanged
+  const messages = useMemo(
+    () => (documentId ? allMessages : []),
+    [documentId, allMessages]
+  );
   const isLoading = useChatStore(selectIsLoading);
   const addUserMessage = useChatStore((s) => s.addUserMessage);
   const addAssistantMessage = useChatStore((s) => s.addAssistantMessage);
