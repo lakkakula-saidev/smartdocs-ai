@@ -1,6 +1,7 @@
 fastapi[standard]
 uvicorn
 python-multipart
+pydantic-settings
 langchain
 langchain-openai
 langchain-chroma
