@@ -4,6 +4,7 @@
 [build]
 dockerfilePath = "backend/Dockerfile"
 context = "backend"
+target = "production"  # ensure production stage (avoids dev fastapi server)
 
 [deploy]
 # Use Dockerfile CMD (uvicorn); minimal restart policy
@@ -12,6 +13,3 @@ restartPolicyType = "ON_FAILURE"
 [[services]]
 name = "backend"
 rootDirectory = "backend"
-# No buildCommand/startCommand needed; Docker image handles start
-
-# After commit & push: Railway → Redeploy to pick up railway.toml
