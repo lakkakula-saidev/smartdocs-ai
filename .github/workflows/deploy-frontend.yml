@@ -3,9 +3,7 @@ name: Deploy Frontend (GitHub Pages)
 on:
   push:
     branches: [ main ]
-    paths:
-      - "frontend/smartdocs-ui/**"
-      - ".github/workflows/deploy-frontend.yml"
+    # Removed path filters so any commit (including empty or backend-only) can retrigger deployment.
   workflow_dispatch:
 
 permissions:
