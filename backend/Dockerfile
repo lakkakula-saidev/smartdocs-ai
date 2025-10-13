@@ -85,48 +85,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 # Use Uvicorn for production with proper configuration (single worker is fine for minimal portfolio)
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--log-level", "info", "--access-log"]
 
-# Stage 3: Development stage (optional)
-FROM base as development
-
-# Install development dependencies
-RUN pip install --no-cache-dir \
-    pytest \
-    pytest-asyncio \
-    httpx \
-    black \
-    flake8 \
-    mypy
-
-# Set working directory
-WORKDIR /app
-
-# Copy application code
-COPY --chown=appuser:appuser . .
-
-# Create directories with proper permissions
-RUN mkdir -p /app/backend/vectorstores \
-    && mkdir -p /app/logs \
-    && chown -R appuser:appuser /app \
-    && chmod -R 777 /app/backend/vectorstores
-
-# Switch to non-root user
-USER appuser
-
-# Environment variables for development
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONPATH=/app \
-    ENVIRONMENT=development \
-    DEBUG=true \
-    RELOAD=true \
-    HOST=0.0.0.0 \
-    PORT=8000 \
-    LOG_LEVEL=DEBUG \
-    LOG_FORMAT=simple \
-    VECTOR_STORE_PERSIST_DIR=/app/backend/vectorstores
-
-# Expose the application port
-EXPOSE 8000
-
-# Development command with auto-reload
-CMD ["fastapi", "dev", "app/main.py", "--host", "0.0.0.0", "--port", "8000"]
+# (Removed separate development stage to ensure production image is final for Railway)
