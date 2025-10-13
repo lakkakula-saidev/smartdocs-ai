@@ -3,7 +3,6 @@ name: Deploy Frontend (GitHub Pages)
 on:
   push:
     branches: [ main ]
-    # Removed path filters so any commit (including empty or backend-only) can retrigger deployment.
   workflow_dispatch:
 
 permissions:
@@ -17,15 +16,9 @@ concurrency:
 
 env:
   NODE_VERSION: 18.x
-  # Set this to true for project (repo) pages (username.github.io/repo-name)
   GITHUB_PAGES_PROJECT: "true"
-  # Override base path manually (optional). Leave empty to auto-derive.
   GITHUB_PAGES_BASE: ""
-  # Public runtime vars (exposed in bundle). Adjust to your backend endpoint.
   VITE_APP_NAME: "SmartDocs AI"
-  # IMPORTANT: Set VITE_API_URL in repository settings → Actions → Variables (recommended) or Secrets.
-  # Example variable (uncomment below to hardcode, but prefer Actions Variables):
-  # VITE_API_URL: "https://your-backend.example.com"
 
 jobs:
   build:
@@ -38,11 +31,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
       - name: Use Node.js ${{ env.NODE_VERSION }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-        # Removed caching because repository intentionally omits lockfiles; setup-node cache requires a lockfile.
 
       - name: Show lockfile status
         run: |
@@ -69,6 +64,13 @@ jobs:
           GITHUB_PAGES_PROJECT: ${{ env.GITHUB_PAGES_PROJECT }}
           GITHUB_PAGES_BASE: ${{ env.GITHUB_PAGES_BASE }}
 
+      - name: Verify build output
+        run: |
+          echo "Listing dist/"
+          ls -al dist
+          echo "Index head snippet:"
+          sed -n '1,120p' dist/index.html | head -n 40 || true
+
       - name: Upload build artifact
         uses: actions/upload-pages-artifact@v3
         with:
@@ -89,10 +91,9 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-# Notes:
-# 1. Set repository → Settings → Pages → Build and deployment → Source: GitHub Actions.
-# 2. Provide VITE_API_URL via repository Variables to avoid hardcoding in workflow.
-# 3. For user/organization root sites (username.github.io) set GITHUB_PAGES_PROJECT to "false".
-# 4. To enable source maps temporarily set BUILD_SOURCEMAP to true (avoid for routine production).
-# 5. Vite base path auto-derived from repo name when GITHUB_PAGES_PROJECT=true (see vite.config.ts).
-# 6. Lockfile intentionally excluded; add one (npm shrinkwrap / package-lock) and re-enable caching for reproducible installs later.
+# Troubleshooting:
+# - If the site still shows README ensure Settings → Pages → Source = GitHub Actions.
+# - First deployment can take a few minutes; force-refresh (Ctrl+Shift+R).
+# - Check Actions logs for "Listing dist/" to verify build content.
+# - Set GITHUB_PAGES_PROJECT="false" for user/org root (username.github.io) deployments.
+# - Provide VITE_API_URL via repository Variables for live API integration.
