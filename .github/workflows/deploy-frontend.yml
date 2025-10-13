@@ -25,8 +25,8 @@ env:
   GITHUB_PAGES_BASE: ""
   # Public runtime vars (exposed in bundle). Adjust to your backend endpoint.
   VITE_APP_NAME: "SmartDocs AI"
-  # IMPORTANT: Set VITE_API_URL in repository settings → Actions → Variables or as an Environment Variable.
-  # Example variable (uncomment below to hardcode, but prefer Actions/Variables or Secrets):
+  # IMPORTANT: Set VITE_API_URL in repository settings → Actions → Variables (recommended) or Secrets.
+  # Example variable (uncomment below to hardcode, but prefer Actions Variables):
   # VITE_API_URL: "https://your-backend.example.com"
 
 jobs:
@@ -45,12 +45,26 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
-          cache-dependency-path: "frontend/smartdocs-ui/package-lock.json"
+          # Removed cache-dependency-path because lockfile intentionally not committed (ignored).
+          # setup-node will still attempt a generic npm cache.
+
+      - name: Show lockfile status
+        run: |
+          if [ -f package-lock.json ]; then
+            echo "package-lock.json present"
+          else
+            echo "No package-lock.json (using npm install fallback)"
+          fi
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
 
-      - name: Type check
+      - name: Build (type check + production bundle)
         run: npm run build -- --emptyOutDir false --mode production
         env:
           BUILD_SOURCEMAP: "false"
@@ -81,7 +95,8 @@ jobs:
 
 # Notes:
 # 1. Set repository → Settings → Pages → Build and deployment → Source: GitHub Actions.
-# 2. Provide VITE_API_URL via repository Variables (preferred) to avoid hardcoding in workflow.
+# 2. Provide VITE_API_URL via repository Variables to avoid hardcoding in workflow.
 # 3. For user/organization root sites (username.github.io) set GITHUB_PAGES_PROJECT to "false".
-# 4. To enable source maps temporarily set BUILD_SOURCEMAP to true (avoid in long-term production).
-# 5. Vite base path is auto-derived from repo name when GITHUB_PAGES_PROJECT=true (see vite.config.ts).
+# 4. To enable source maps temporarily set BUILD_SOURCEMAP to true (avoid for routine production).
+# 5. Vite base path auto-derived from repo name when GITHUB_PAGES_PROJECT=true (see vite.config.ts).
+# 6. Lockfile intentionally excluded; workflow adapts (npm install). Add a lockfile + remove fallback for reproducible builds later.
