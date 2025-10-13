@@ -1,0 +1,87 @@
+name: Deploy Frontend (GitHub Pages)
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "frontend/smartdocs-ui/**"
+      - ".github/workflows/deploy-frontend.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages-frontend"
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: 18.x
+  # Set this to true for project (repo) pages (username.github.io/repo-name)
+  GITHUB_PAGES_PROJECT: "true"
+  # Override base path manually (optional). Leave empty to auto-derive.
+  GITHUB_PAGES_BASE: ""
+  # Public runtime vars (exposed in bundle). Adjust to your backend endpoint.
+  VITE_APP_NAME: "SmartDocs AI"
+  # IMPORTANT: Set VITE_API_URL in repository settings → Actions → Variables or as an Environment Variable.
+  # Example variable (uncomment below to hardcode, but prefer Actions/Variables or Secrets):
+  # VITE_API_URL: "https://your-backend.example.com"
+
+jobs:
+  build:
+    name: Build static frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend/smartdocs-ui
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: "frontend/smartdocs-ui/package-lock.json"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run build -- --emptyOutDir false --mode production
+        env:
+          BUILD_SOURCEMAP: "false"
+          VITE_API_URL: ${{ vars.VITE_API_URL || env.VITE_API_URL }}
+          VITE_APP_NAME: ${{ env.VITE_APP_NAME }}
+          GITHUB_PAGES_PROJECT: ${{ env.GITHUB_PAGES_PROJECT }}
+          GITHUB_PAGES_BASE: ${{ env.GITHUB_PAGES_BASE }}
+
+      - name: Upload build artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/smartdocs-ui/dist
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+# Notes:
+# 1. Set repository → Settings → Pages → Build and deployment → Source: GitHub Actions.
+# 2. Provide VITE_API_URL via repository Variables (preferred) to avoid hardcoding in workflow.
+# 3. For user/organization root sites (username.github.io) set GITHUB_PAGES_PROJECT to "false".
+# 4. To enable source maps temporarily set BUILD_SOURCEMAP to true (avoid in long-term production).
+# 5. Vite base path is auto-derived from repo name when GITHUB_PAGES_PROJECT=true (see vite.config.ts).
