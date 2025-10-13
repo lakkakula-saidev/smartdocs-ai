@@ -1,252 +1,65 @@
-# SmartDocs AI Backend - Docker Build Context Exclusions
-# This file optimizes Docker build performance by excluding unnecessary files
+# Minimal Docker ignore (post-cleanup)
 
-# ============================================================================
-# DEVELOPMENT ENVIRONMENT FILES
-# ============================================================================
-
-# Virtual environments
+# Python env & caches
 .venv/
-venv/
-env/
-ENV/
-.env/
-.venv*/
-
-# Python cache and compiled files
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
-.Python
-*.egg-info/
+
+# VCS
+.git/
+.github/
+
+# Tests & coverage (removed from repo)
+test_*.py
+*_test.py
+.pytest_cache/
+coverage.xml
+.coverage
+htmlcov/
+
+# Local env / secrets
+.env
+.env.*
+!.env.example
+
+# Build artifacts
 dist/
 build/
-*.egg
 
-# IDE and editor files
+# Editors / OS noise
 .vscode/
 .idea/
+.DS_Store
+Thumbs.db
 *.swp
 *.swo
 *~
-.DS_Store
-Thumbs.db
 
-# ============================================================================
-# VERSION CONTROL AND CI/CD
-# ============================================================================
-
-# Git files
-.git/
-.gitignore
-.gitattributes
-.github/
-
-# CI/CD files
-.travis.yml
-.gitlab-ci.yml
-.circleci/
-Jenkinsfile
-
-# ============================================================================
-# DOCUMENTATION AND DEVELOPMENT FILES
-# ============================================================================
-
-# Documentation files (not needed at runtime)
-README.md
-CHANGELOG.md
-LICENSE
-*.md
-docs/
-doc/
-
-# Development guides and plans
-dev_guide.md
-fix_plan.md
-INFRASTRUCTURE.md
-
-# ============================================================================
-# TEST FILES AND COVERAGE
-# ============================================================================
-
-# Test files
-test_*.py
-*_test.py
-tests/
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-.nox/
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-.hypothesis/
-
-# ============================================================================
-# CONFIGURATION AND ENVIRONMENT FILES
-# ============================================================================
-
-# Environment files (use environment variables instead)
-.env
-.env.*
-!.env.template
-
-# Configuration files not needed in container
-.editorconfig
-.flake8
-setup.cfg
-pyproject.toml
-tox.ini
-
-# ============================================================================
-# LOGS AND TEMPORARY FILES
-# ============================================================================
-
-# Log files
+# Logs / temp
 *.log
-logs/
-log/
-
-# Temporary files
 tmp/
 temp/
-.tmp/
 *.tmp
 
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# ============================================================================
-# PYTHON SPECIFIC
-# ============================================================================
-
-# Jupyter Notebook checkpoints
-.ipynb_checkpoints
-
-# IPython
-profile_default/
-ipython_config.py
-
-# pyenv
-.python-version
-
-# pipenv
-Pipfile.lock
-
-# Poetry
-poetry.lock
-
-# ============================================================================
-# APPLICATION SPECIFIC
-# ============================================================================
-
-# Vector store data (will be mounted as volume in production)
-backend/vectorstores/
+# Vector store runtime data (mount as volume instead)
+# Ignore all known historical and current locations plus any nested occurrences
 vectorstores/
+backend/vectorstores/
+backend/backend/vectorstores/
+**/vectorstores/
 
-# Uploaded files and temporary processing
-uploads/
-temp_files/
-
-# ============================================================================
-# CONTAINER AND DEPLOYMENT FILES
-# ============================================================================
-
-# Docker files (not needed inside container)
-Dockerfile*
-docker-compose*.yml
-.dockerignore
-
-# Kubernetes files
-k8s/
-kubernetes/
-*.yaml
-*.yml
-
-# ============================================================================
-# FRONTEND FILES (if building from root context)
-# ============================================================================
-
-# Node.js
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Frontend build artifacts
+# Frontend (not needed for backend image build if building separately)
 frontend/
 
-# ============================================================================
-# PERFORMANCE OPTIMIZATIONS
-# ============================================================================
+# Node modules (if root context ever used)
+node_modules/
 
-# Large binary files that shouldn't be in container
+# Archives
 *.zip
 *.tar.gz
 *.rar
 *.7z
 
-# Media files
-*.mp4
-*.avi
-*.mov
-*.wmv
-*.mp3
-*.wav
-*.flac
-
-# Image files (unless specifically needed)
-*.jpg
-*.jpeg
-*.png
-*.gif
-*.bmp
-*.tiff
-*.svg
-
-# PDF files (unless specifically needed for testing)
-*.pdf
-
-# ============================================================================
-# MAKEFILE AND SCRIPTS
-# ============================================================================
-
-# Build and development scripts
-Makefile
-scripts/
-bin/
-*.sh
-*.bat
-
-# ============================================================================
-# EXCLUDE PATTERNS
-# ============================================================================
-
-# Any file starting with 'local'
-local*
-
-# Any file ending with '.local'
-*.local
-
-# Backup files
+# Misc
 *.bak
 *.backup
-*~
-
-# Editor swap files
-.*.swp
-.*.swo
-
-# Temporary Python files
-*.pyc
-*.pyo
-*.pyd
