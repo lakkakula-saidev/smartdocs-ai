@@ -217,6 +217,15 @@ async def upload_document(
     )
     
     try:
+        # Check if OpenAI API key is configured
+        settings = get_settings()
+        if not settings.has_openai_key:
+            logger.error("Upload attempted without OpenAI API key configured")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="AI processing service not available. OpenAI API key not configured."
+            )
+        
         # Process the uploaded document
         upload_response = await document_service.process_upload(file)
         
@@ -241,7 +250,7 @@ async def upload_document(
             extra={
                 "uploaded_filename": file.filename,
                 "error_code": e.error_code,
-                "message": e.message
+                "error_message": e.message
             },
             exc_info=True
         )
@@ -265,7 +274,7 @@ async def upload_document(
             extra={
                 "uploaded_filename": file.filename,
                 "error_code": e.error_code,
-                "message": e.message
+                "error_message": e.message
             },
             exc_info=True
         )
@@ -289,7 +298,7 @@ async def upload_document(
             extra={
                 "uploaded_filename": file.filename,
                 "error_code": e.error_code,
-                "message": e.message
+                "error_message": e.message
             },
             exc_info=True
         )
@@ -310,9 +319,21 @@ async def upload_document(
             },
             exc_info=True
         )
+        
+        # Provide more helpful error messages based on common issues
+        error_str = str(e).lower()
+        if "openai" in error_str and ("api" in error_str or "key" in error_str):
+            detail = "AI processing service unavailable. Please check OpenAI API configuration."
+        elif "chroma" in error_str or "vector" in error_str:
+            detail = "Document storage service unavailable. Please try again later."
+        elif "permission" in error_str or "access" in error_str:
+            detail = "Document processing failed due to system permissions. Please try again later."
+        else:
+            detail = "Document upload failed due to internal error. Please try again later."
+            
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Document upload failed due to internal error"
+            detail=detail
         )
 
 

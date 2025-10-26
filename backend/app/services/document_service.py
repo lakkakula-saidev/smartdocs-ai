@@ -343,13 +343,16 @@ class DocumentService:
             
             # Import here to avoid circular dependencies
             try:
-                from langchain.text_splitter import RecursiveCharacterTextSplitter
-            except ImportError as e:
-                raise DocumentProcessingError(
-                    message="LangChain not available for text splitting",
-                    error_code="LANGCHAIN_NOT_AVAILABLE",
-                    details={"required_package": "langchain"}
-                ) from e
+                from langchain_text_splitters import RecursiveCharacterTextSplitter
+            except ImportError:
+                try:
+                    from langchain.text_splitter import RecursiveCharacterTextSplitter
+                except ImportError as e:
+                    raise DocumentProcessingError(
+                        message="LangChain text splitters not available. Install with: pip install langchain-text-splitters",
+                        error_code="LANGCHAIN_TEXT_SPLITTERS_NOT_AVAILABLE",
+                        details={"required_packages": ["langchain-text-splitters", "langchain"]}
+                    ) from e
             
             # Create splitter and documents
             splitter = RecursiveCharacterTextSplitter(
@@ -407,7 +410,7 @@ class DocumentService:
             )
             
             # Import embeddings here to avoid circular dependencies
-            from ..config import require_openai_api_key
+            from ..config import get_settings
             
             try:
                 from langchain_openai import OpenAIEmbeddings
@@ -416,14 +419,21 @@ class DocumentService:
                     from langchain.embeddings.openai import OpenAIEmbeddings
                 except ImportError as e:
                     raise VectorStoreError(
-                        message="OpenAI embeddings not available",
+                        message="OpenAI embeddings not available. Install with: pip install langchain-openai",
                         error_code="EMBEDDINGS_NOT_AVAILABLE",
                         details={"required_package": "langchain-openai"}
                     ) from e
             
             # Get API key and create embeddings
-            api_key = require_openai_api_key()
-            embeddings = OpenAIEmbeddings(openai_api_key=api_key)
+            settings = get_settings()
+            if not settings.has_openai_key:
+                raise VectorStoreError(
+                    message="OpenAI API key not configured. Please set OPENAI_API_KEY environment variable.",
+                    error_code="OPENAI_API_KEY_MISSING",
+                    details={"required_env": "OPENAI_API_KEY"}
+                )
+            
+            embeddings = OpenAIEmbeddings(openai_api_key=settings.openai_api_key)
             
             # Create collection in vector store
             collection_name = await self.document_registry.vector_store.create_collection(

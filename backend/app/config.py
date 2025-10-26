@@ -102,10 +102,11 @@ class Settings(BaseSettings):
     )
     
     # === AI/LLM Configuration ===
-    openai_api_key: str = Field(
-        ...,
+    # Make OpenAI API key optional with a default to prevent validation errors
+    openai_api_key: Optional[str] = Field(
+        default=None,
         env="OPENAI_API_KEY",
-        description="OpenAI API key (required)"
+        description="OpenAI API key (required for AI features)"
     )
     openai_model: str = Field(
         default="gpt-4o-mini",
@@ -283,6 +284,11 @@ class Settings(BaseSettings):
         """Check if running in production environment."""
         return self.environment == Environment.PRODUCTION
     
+    @property
+    def has_openai_key(self) -> bool:
+        """Check if OpenAI API key is configured."""
+        return bool(self.openai_api_key and self.openai_api_key.strip())
+    
     def create_vector_store_dir(self) -> None:
         """Create vector store directory if it doesn't exist."""
         self.vector_store_path.mkdir(parents=True, exist_ok=True)
@@ -335,6 +341,7 @@ def load_settings() -> Settings:
             
         print(f"[config] Vector store provider: {settings.vector_store_provider}")
         print(f"[config] OpenAI model: {settings.openai_model}")
+        print(f"[config] OpenAI API key configured: {settings.has_openai_key}")
         
         # Ensure vector store directory exists
         settings.create_vector_store_dir()
@@ -388,9 +395,14 @@ def require_openai_api_key() -> str:
     
     try:
         settings = get_settings()
+        if not settings.has_openai_key:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="OPENAI_API_KEY not configured. Please configure your OpenAI API key."
+            )
         return settings.openai_api_key
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="OPENAI_API_KEY not configured."
+            detail="OPENAI_API_KEY not configured. Please configure your OpenAI API key."
         )
