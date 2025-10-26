@@ -3,6 +3,9 @@
 Minimal full‑stack Retrieval Augmented Generation (RAG) demo.
 Upload a PDF, get contextual answers via chat.
 
+## Features
+- Persistent per-document chat history (localStorage)
+
 ## Stack (Essentials Only)
 Backend: FastAPI + LangChain (OpenAI embeddings + Chroma) in [`backend/app/main.py`](backend/app/main.py:1)  
 Frontend: React 19 + TypeScript + Vite in [`frontend/smartdocs-ui/src/main.tsx`](frontend/smartdocs-ui/src/main.tsx:1)  
@@ -75,6 +78,9 @@ This repository intentionally removes:
 Retained files focus on executable code and minimal instructions.
 
 Note: Automated tests were intentionally removed during cleanup. Reintroduce a minimal smoke/integration test suite in a future iteration to validate ingestion and QA flow.
+
+## Development Notes
+Clearing localStorage resets chat histories.
 
 ## Troubleshooting (Condensed)
 | Symptom | Fix |

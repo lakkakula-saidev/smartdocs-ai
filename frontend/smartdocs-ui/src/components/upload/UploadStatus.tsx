@@ -27,10 +27,6 @@ export interface UploadStatusProps {
    */
   className?: string;
   /**
-   * If true, show the leading static success label text.
-   */
-  showSuccessLabel?: boolean;
-  /**
    * Optional callback to clear error (renders a dismiss button if provided).
    */
   onDismissError?: () => void;
@@ -44,7 +40,6 @@ export const UploadStatus: React.FC<UploadStatusProps> = ({
   successId,
   hideWhenEmpty = true,
   className = "",
-  showSuccessLabel = true,
   onDismissError
 }) => {
   if (hideWhenEmpty && !error && !successId) return null;
@@ -86,8 +81,7 @@ export const UploadStatus: React.FC<UploadStatusProps> = ({
           className
         ].join(" ")}
       >
-        {showSuccessLabel && "Upload successful. ID: "}
-        <code className="text-emerald-300">{successId}</code>
+        Upload successful. ID: <code className="text-emerald-300">{successId}</code>
       </p>
     );
   }
