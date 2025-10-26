@@ -179,7 +179,7 @@ Done.`);
                     : "Upload a document to enable chat..."
                 }
                 disabled={!documentId || isLoading}
-                className="w-full resize-none rounded-lg bg-white border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full resize-none rounded-lg bg-white border border-gray-300 px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
             <button
