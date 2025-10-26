@@ -91,8 +91,8 @@ def validate_file_upload(file: UploadFile) -> None:
     # Check file type
     if (file.content_type not in settings.allowed_file_types and 
         not file.filename.lower().endswith(".pdf")):
-        logger.warning(f"Invalid file type: {file.content_type}", 
-                      extra={"filename": file.filename, "content_type": file.content_type})
+        logger.warning(f"Invalid file type: {file.content_type}",
+                      extra={"file_name": file.filename, "content_type": file.content_type})
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Only PDF files are supported."
@@ -101,8 +101,8 @@ def validate_file_upload(file: UploadFile) -> None:
     # Check file size if available
     if hasattr(file, 'size') and file.size is not None:
         if file.size > settings.max_upload_size_bytes:
-            logger.warning(f"File too large: {file.size} bytes", 
-                          extra={"filename": file.filename, "size": file.size, 
+            logger.warning(f"File too large: {file.size} bytes",
+                          extra={"file_name": file.filename, "size": file.size,
                                 "max_size": settings.max_upload_size_bytes})
             raise HTTPException(
                 status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
@@ -117,8 +117,8 @@ def validate_file_upload(file: UploadFile) -> None:
             detail="Filename is required."
         )
     
-    logger.debug(f"File validation passed", 
-                extra={"filename": file.filename, "content_type": file.content_type})
+    logger.debug(f"File validation passed",
+                extra={"file_name": file.filename, "content_type": file.content_type})
 
 
 def create_temp_file(file: UploadFile, prefix: str = "upload_pdf_") -> tuple[str, str]:
