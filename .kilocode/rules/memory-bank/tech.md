@@ -68,6 +68,9 @@
 - **remark-gfm**: GitHub Flavored Markdown support
 - **Custom Components**: Styled markdown elements
 
+### State Persistence
+- **Zustand**: State management with persist middleware for chat histories stored in localStorage (key: "smartdocs-chat-storage")
+
 ### Development Tools
 - **ESLint**: Code linting with TypeScript support
 - **TypeScript ESLint**: TypeScript-specific linting rules
