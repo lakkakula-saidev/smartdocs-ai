@@ -97,6 +97,41 @@ class AskRequest(BaseModel):
         return v.strip()
 
 
+class RenameDocumentRequest(BaseModel):
+    """Request model for renaming a document."""
+    
+    model_config = ConfigDict(
+        str_strip_whitespace=True,
+        validate_assignment=True,
+        extra="forbid"
+    )
+    
+    document_id: str = Field(
+        ...,
+        min_length=32,
+        max_length=32,
+        pattern=r"^[a-f0-9]{32}$",
+        description="Document ID to rename (32-character hex string)",
+        examples=["a1b2c3d4e5f6789012345678901234ab"]
+    )
+    
+    new_display_name: str = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="New display name for the document",
+        examples=["My Research Notes", "Updated Contract", "Important Presentation"]
+    )
+    
+    @field_validator('new_display_name')
+    @classmethod
+    def validate_display_name(cls, v: str) -> str:
+        """Validate display name is not just whitespace."""
+        if not v.strip():
+            raise ValueError("Display name cannot be empty or only whitespace")
+        return v.strip()
+
+
 # ---- Response Models ----
 
 class AskResponse(BaseModel):
@@ -173,6 +208,44 @@ class UploadResponse(BaseModel):
         ge=0,
         description="Time taken to process the document in milliseconds",
         examples=[3200]
+    )
+    
+    display_name: str = Field(
+        ...,
+        description="Cleaned filename for display (simplified approach)",
+        examples=["Machine Learning Research Paper", "Quarterly Report"]
+    )
+
+
+class RenameDocumentResponse(BaseModel):
+    """Response model for document renaming."""
+    
+    model_config = ConfigDict(
+        validate_assignment=True
+    )
+    
+    document_id: str = Field(
+        ...,
+        description="Document ID that was renamed",
+        examples=["a1b2c3d4e5f6789012345678901234ab"]
+    )
+    
+    old_display_name: str = Field(
+        ...,
+        description="Previous display name",
+        examples=["Machine Learning Research Paper"]
+    )
+    
+    new_display_name: str = Field(
+        ...,
+        description="Updated display name",
+        examples=["My ML Research Notes"]
+    )
+    
+    success: bool = Field(
+        ...,
+        description="Whether the rename operation succeeded",
+        examples=[True]
     )
 
 
@@ -376,6 +449,58 @@ class DocumentInfo(TimestampMixin, BaseModel):
         description="Total processing time in milliseconds",
         examples=[3200]
     )
+    
+    extracted_title: Optional[str] = Field(
+        default=None,
+        max_length=200,
+        description="Title extracted from document content during processing",
+        examples=["Machine Learning Research Paper", "Q3 Financial Report 2024"]
+    )
+    
+    display_name: Optional[str] = Field(
+        default=None,
+        max_length=200,
+        description="User-customizable display name for the document",
+        examples=["My Research Notes", "Important Contract"]
+    )
+    
+    def get_display_name(self) -> str:
+        """Get the best available display name using fallback hierarchy."""
+        if self.display_name:
+            return self.display_name
+        if self.extracted_title:
+            return self.extracted_title
+        if self.filename:
+            return self._clean_filename_for_display(self.filename)
+        return f"Document {self.document_id[:8]}..."
+    
+    def _clean_filename_for_display(self, filename: str) -> str:
+        """Clean filename for better display."""
+        if not filename:
+            return "Untitled Document"
+        
+        # Remove file extension
+        base_name = filename.rsplit('.', 1)[0] if '.' in filename else filename
+        
+        # Replace underscores and dashes with spaces
+        display_name = base_name.replace('_', ' ').replace('-', ' ')
+        
+        # Remove common suffixes like (1), (2), etc.
+        import re
+        display_name = re.sub(r'\s*\(\d+\)\s*$', '', display_name)
+        
+        # Remove excessive whitespace
+        display_name = ' '.join(display_name.split())
+        
+        # Capitalize if it looks like it needs it
+        if display_name.islower():
+            display_name = display_name.title()
+        
+        # Truncate if too long
+        if len(display_name) > 100:
+            display_name = display_name[:97] + "..."
+        
+        return display_name or "Untitled Document"
 
 
 class VectorStoreInfo(BaseModel):
@@ -584,16 +709,18 @@ class SystemMetrics(BaseModel):
 __all__ = [
     # Enums
     "HealthStatus",
-    "DocumentStatus", 
+    "DocumentStatus",
     "ProcessingStage",
     
     # Request models
     "AskRequest",
+    "RenameDocumentRequest",
     
     # Response models
     "AskResponse",
     "UploadResponse",
-    "HealthResponse", 
+    "RenameDocumentResponse",
+    "HealthResponse",
     "ErrorResponse",
     "DocumentListResponse",
     "VectorStoreListResponse",

@@ -10,7 +10,7 @@ const CodeRenderer: React.FC<any> = ({ inline, children, ...rest }) => {
   if (inline) {
     return (
       <code
-        className="px-1 py-0.5 rounded bg-neutral-900/70 border border-neutral-700/40 text-[0.75rem]"
+        className="px-1 py-0.5 rounded bg-gray-200 border border-gray-300 text-[0.75rem] text-gray-800"
         {...rest}
       >
         {children}
@@ -18,8 +18,8 @@ const CodeRenderer: React.FC<any> = ({ inline, children, ...rest }) => {
     );
   }
   return (
-    <pre className="my-2 rounded-md border border-neutral-700/60 bg-neutral-900/70 overflow-auto px-3 py-2 text-[0.75rem] leading-snug">
-      <code className="font-mono">
+    <pre className="my-2 rounded-md border border-gray-300 bg-gray-50 overflow-auto px-3 py-2 text-[0.75rem] leading-snug">
+      <code className="font-mono text-gray-800">
         {String(children || "").replace(/\n$/, "")}
       </code>
     </pre>
@@ -63,7 +63,9 @@ export function MessageBubble({ role, content }: Props) {
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} w-full`}>
       <div
         className={`max-w-[70%] rounded-lg px-4 py-2 text-sm leading-relaxed ${
-          isUser ? "bg-brand-600 text-white" : "bg-neutral-800 text-neutral-100"
+          isUser
+            ? "bg-brand-600 text-white"
+            : "bg-gray-100 text-gray-900 border border-gray-200"
         } markdown-body`}
       >
         <ReactMarkdown
@@ -86,14 +88,14 @@ export function MessageBubble({ role, content }: Props) {
             },
             strong({ children, ...props }) {
               return (
-                <strong className="font-semibold text-neutral-100" {...props}>
+                <strong className="font-semibold text-gray-900" {...props}>
                   {children}
                 </strong>
               );
             },
             em({ children, ...props }) {
               return (
-                <em className="text-neutral-300 italic" {...props}>
+                <em className="text-gray-700 italic" {...props}>
                   {children}
                 </em>
               );
@@ -101,7 +103,7 @@ export function MessageBubble({ role, content }: Props) {
             blockquote({ children, ...props }) {
               return (
                 <blockquote
-                  className="border-l-4 border-brand-600/70 pl-3 ml-0 my-2 text-neutral-300 italic"
+                  className="border-l-4 border-brand-600/70 pl-3 ml-0 my-2 text-gray-700 italic"
                   {...props}
                 >
                   {children}
@@ -149,10 +151,7 @@ export function MessageBubble({ role, content }: Props) {
             },
             thead({ children, ...props }) {
               return (
-                <thead
-                  className="bg-neutral-700/30 text-neutral-200"
-                  {...props}
-                >
+                <thead className="bg-gray-50 text-gray-700" {...props}>
                   {children}
                 </thead>
               );
@@ -160,7 +159,7 @@ export function MessageBubble({ role, content }: Props) {
             th({ children, ...props }) {
               return (
                 <th
-                  className="px-2 py-1 text-left font-medium border border-neutral-700/60"
+                  className="px-2 py-1 text-left font-medium border border-gray-300"
                   {...props}
                 >
                   {children}
@@ -170,7 +169,7 @@ export function MessageBubble({ role, content }: Props) {
             td({ children, ...props }) {
               return (
                 <td
-                  className="px-2 py-1 align-top border border-neutral-700/60"
+                  className="px-2 py-1 align-top border border-gray-300"
                   {...props}
                 >
                   {children}
@@ -180,7 +179,7 @@ export function MessageBubble({ role, content }: Props) {
             h1({ children, ...props }) {
               return (
                 <h1
-                  className="mt-2 mb-1 text-lg font-semibold tracking-tight text-brand-300"
+                  className="mt-2 mb-1 text-lg font-semibold tracking-tight text-brand-600"
                   {...props}
                 >
                   {children}
@@ -190,7 +189,7 @@ export function MessageBubble({ role, content }: Props) {
             h2({ children, ...props }) {
               return (
                 <h2
-                  className="mt-2 mb-1 text-base font-semibold tracking-tight text-brand-300"
+                  className="mt-2 mb-1 text-base font-semibold tracking-tight text-brand-600"
                   {...props}
                 >
                   {children}
@@ -200,7 +199,7 @@ export function MessageBubble({ role, content }: Props) {
             h3({ children, ...props }) {
               return (
                 <h3
-                  className="mt-2 mb-1 text-sm font-semibold tracking-tight text-brand-200"
+                  className="mt-2 mb-1 text-sm font-semibold tracking-tight text-brand-600"
                   {...props}
                 >
                   {children}
@@ -215,7 +214,7 @@ export function MessageBubble({ role, content }: Props) {
               );
             },
             hr() {
-              return <hr className="my-3 border-neutral-700/60" />;
+              return <hr className="my-3 border-gray-300" />;
             }
           }}
         >
