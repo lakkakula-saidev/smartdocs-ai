@@ -17,7 +17,7 @@ from .config import Settings, get_settings
 from .logger import setup_logging, get_logger, LogContext
 from .exceptions import setup_exception_handlers
 from .db.vector_store import get_vector_store, get_document_registry
-from .routes import health, upload, chat
+from .routes import health, upload, chat, rename, documents
 
 # Global state for startup time tracking
 _startup_time: float = 0
@@ -175,6 +175,10 @@ def create_app(settings: Settings = None) -> FastAPI:
                 {
                     "name": "chat",
                     "description": "Question answering and chat interactions"
+                },
+                {
+                    "name": "documents",
+                    "description": "Document management and metadata operations"
                 }
             ]
         )
@@ -231,6 +235,8 @@ def create_app(settings: Settings = None) -> FastAPI:
         app.include_router(health.router)
         app.include_router(upload.router)
         app.include_router(chat.router)
+        app.include_router(rename.router)
+        app.include_router(documents.router)
         
         # Add diagnostic endpoints for development
         if settings.is_development:

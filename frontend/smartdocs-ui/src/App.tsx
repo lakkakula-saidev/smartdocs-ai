@@ -89,11 +89,13 @@ export default function App() {
       </header>
 
       {/* Main routed content */}
-      <main className="flex-1 w-full mx-auto max-w-7xl px-6 md:px-10 py-10 md:py-14">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/chat" element={<Chat />} />
-        </Routes>
+      <main className="flex-1 w-full mx-auto max-w-7xl px-6 md:px-10 pt-10 md:pt-14 pb-10 md:pb-14 min-h-0">
+        <div className="h-full">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/chat" element={<Chat />} />
+          </Routes>
+        </div>
       </main>
 
       {/* Global Footer */}
