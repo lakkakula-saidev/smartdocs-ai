@@ -5,7 +5,7 @@ import axios, { AxiosError, type AxiosRequestConfig } from "axios";
  * - Uses VITE_API_URL if set and non-empty.
  * - Falls back to localhost:8000 (FastAPI default in this repo).
  */
-const FALLBACK_BASE = "http://0.0.0.0:800";
+const FALLBACK_BASE = "http://0.0.0.0:8000";
 const envBase = (import.meta.env.VITE_API_URL as string | undefined)?.trim();
 const baseURL = envBase && envBase.length ? envBase : FALLBACK_BASE;
 
@@ -33,9 +33,6 @@ interface ServerUploadResponse {
   document_id: string;
   chunks: number;
   bytes: number;
-  filename?: string;
-  processing_time_ms?: number;
-  display_name: string;
 }
 
 export interface UploadResult {
@@ -43,39 +40,12 @@ export interface UploadResult {
   id: string; // backward alias
   chunks?: number;
   bytes?: number;
-  filename?: string;
-  displayName: string;
-  processingTimeMs?: number;
   raw?: ServerUploadResponse;
 }
 
 export interface AskResponse {
   answer: string;
   document_id?: string | null;
-  document_display_name?: string;
-}
-
-export interface DocumentInfo {
-  document_id: string;
-  filename?: string;
-  file_size_bytes?: number;
-  text_size_bytes: number;
-  chunk_count: number;
-  status: string;
-  collection_name: string;
-  processing_time_ms?: number;
-  extracted_title?: string;
-  display_name?: string;
-  created_at: string;
-  updated_at?: string;
-}
-
-export interface DocumentMetadata {
-  id: string;
-  displayName: string;
-  filename?: string;
-  extractedTitle?: string;
-  userDisplayName?: string;
 }
 
 /* -------------------------- Error Helper Logic ---------------------------- */
@@ -118,12 +88,6 @@ function normalizeUploadResponse(data: ServerUploadResponse): UploadResult {
     id: documentId,
     chunks: data?.chunks,
     bytes: data?.bytes,
-    filename: data?.filename,
-    displayName:
-      data?.display_name ??
-      data?.filename ??
-      `Document ${documentId.slice(0, 8)}...`,
-    processingTimeMs: data?.processing_time_ms,
     raw: data
   };
 }
@@ -185,84 +149,4 @@ export async function askQuestion(
     const detail = extractErrorDetail(ax, "Query failed.");
     throw new Error(detail);
   }
-}
-
-/**
- * Fetch document information by ID.
- */
-export async function fetchDocumentInfo(
-  documentId: string
-): Promise<DocumentInfo> {
-  try {
-    const { data } = await api.get<DocumentInfo>(`/documents/${documentId}`);
-    return data;
-  } catch (err) {
-    const ax = err as AxiosError<BackendErrorShape>;
-    const detail = extractErrorDetail(ax, "Failed to fetch document info.");
-    throw new Error(detail);
-  }
-}
-
-/**
- * Response from the rename document API.
- */
-export interface RenameDocumentResponse {
-  document_id: string;
-  old_display_name: string;
-  new_display_name: string;
-  success: boolean;
-}
-
-/**
- * Rename document display name using the new PUT endpoint.
- */
-export async function renameDocument(
-  documentId: string,
-  newDisplayName: string
-): Promise<RenameDocumentResponse> {
-  try {
-    const { data } = await api.put<RenameDocumentResponse>(
-      `/documents/${documentId}/rename`,
-      {
-        document_id: documentId,
-        new_display_name: newDisplayName
-      }
-    );
-    return data;
-  } catch (err) {
-    const ax = err as AxiosError<BackendErrorShape>;
-    const detail = extractErrorDetail(ax, "Failed to rename document.");
-    throw new Error(detail);
-  }
-}
-
-/**
- * Fetch all uploaded documents.
- */
-export async function fetchDocuments(): Promise<DocumentInfo[]> {
-  try {
-    const { data } = await api.get<DocumentInfo[]>("/documents/");
-    return data;
-  } catch (err) {
-    const ax = err as AxiosError<BackendErrorShape>;
-    const detail = extractErrorDetail(ax, "Failed to fetch documents.");
-    throw new Error(detail);
-  }
-}
-
-/**
- * Convert DocumentInfo to DocumentMetadata for frontend use.
- */
-export function documentInfoToMetadata(
-  docInfo: DocumentInfo
-): DocumentMetadata {
-  return {
-    id: docInfo.document_id,
-    displayName:
-      docInfo.display_name ||
-      docInfo.filename ||
-      `Document ${docInfo.document_id.slice(0, 8)}...`,
-    filename: docInfo.filename,
-    userDisplayName: docInfo.display_name
-  };
 }

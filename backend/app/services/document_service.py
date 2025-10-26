@@ -106,7 +106,7 @@ class DocumentService:
             file: Uploaded PDF file
             
         Returns:
-            Upload response with document metadata including extracted title
+            Upload response with document metadata
             
         Raises:
             DocumentProcessingError: If any processing step fails
@@ -134,9 +134,6 @@ class DocumentService:
             # Step 3: Extract text from PDF
             extracted_text = await self._extract_text(temp_path, document_id)
             
-            # Step 3.5: Create display name from filename (simplified approach)
-            display_name = self._clean_filename_for_display(file.filename)
-            
             # Step 4: Create document chunks
             documents = await self._create_chunks(extracted_text, document_id)
             
@@ -145,7 +142,7 @@ class DocumentService:
                 document_id, documents, file.filename
             )
             
-            # Step 6: Register document metadata (with display name)
+            # Step 6: Register document metadata
             processing_time_ms = int((time.time() - start_time) * 1000)
             doc_info = await self.document_registry.register_document(
                 document_id=document_id,
@@ -153,8 +150,7 @@ class DocumentService:
                 file_size_bytes=validation_info.file_size_bytes,
                 text_size_bytes=len(extracted_text.encode('utf-8')),
                 chunk_count=len(documents),
-                processing_time_ms=processing_time_ms,
-                display_name=display_name
+                processing_time_ms=processing_time_ms
             )
             
             self.logger.info(
@@ -163,8 +159,7 @@ class DocumentService:
                     "document_id": document_id,
                     "uploaded_filename": file.filename,
                     "chunk_count": len(documents),
-                    "processing_time_ms": processing_time_ms,
-                    "display_name": display_name
+                    "processing_time_ms": processing_time_ms
                 }
             )
             
@@ -173,8 +168,7 @@ class DocumentService:
                 chunks=len(documents),
                 bytes=len(extracted_text.encode('utf-8')),
                 filename=file.filename,
-                processing_time_ms=processing_time_ms,
-                display_name=display_name
+                processing_time_ms=processing_time_ms
             )
             
         except Exception as e:
@@ -236,41 +230,6 @@ class DocumentService:
         
         with ExceptionContext(VectorStoreError, f"Failed to delete document {document_id}"):
             return await self.document_registry.delete_document(document_id)
-    
-    async def rename_document(self, document_id: str, new_display_name: str) -> DocumentInfo:
-        """
-        Rename document's display name.
-        
-        Args:
-            document_id: Document identifier
-            new_display_name: New display name for the document
-            
-        Returns:
-            Updated document information
-            
-        Raises:
-            DocumentNotFoundError: If document not found
-        """
-        self.logger.info(
-            f"Renaming document",
-            extra={
-                "document_id": document_id,
-                "new_display_name": new_display_name
-            }
-        )
-        
-        # Use the document registry to rename
-        updated_doc = await self.document_registry.rename_document(document_id, new_display_name)
-        
-        self.logger.info(
-            f"Document renamed successfully",
-            extra={
-                "document_id": document_id,
-                "new_display_name": new_display_name
-            }
-        )
-        
-        return updated_doc
     
     async def _save_uploaded_file(self, file: UploadFile, document_id: str) -> str:
         """
@@ -353,32 +312,6 @@ class DocumentService:
             )
             
             return extracted_text
-    
-    def _clean_filename_for_display(self, filename: Optional[str]) -> str:
-        """
-        Clean filename for display by removing extension and formatting.
-        
-        Args:
-            filename: Original filename
-            
-        Returns:
-            Cleaned filename for display
-        """
-        if not filename:
-            return "Untitled Document"
-            
-        # Remove file extension
-        name = filename
-        if '.' in name:
-            name = name.rsplit('.', 1)[0]
-            
-        # Replace common separators with spaces
-        name = name.replace('_', ' ').replace('-', ' ')
-        
-        # Remove extra whitespace and capitalize
-        name = ' '.join(name.split()).title()
-        
-        return name or "Untitled Document"
     
     async def _create_chunks(self, text: str, document_id: str) -> List[Any]:
         """

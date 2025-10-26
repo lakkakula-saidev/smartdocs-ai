@@ -125,76 +125,70 @@ Done.`);
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0">
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-4 md:px-6 pt-4 scrollbar-thin"
+        className="flex-1 min-h-0 overflow-y-auto space-y-3 pr-1 pb-28 scrollbar-thin"
       >
-        <div className="space-y-3 pb-4">
-          {messages.length === 0 && (
-            <div className="flex items-center justify-center min-h-[200px]">
-              <p className="text-sm text-gray-500 text-center">
-                {documentId
-                  ? "Start chatting about the uploaded document."
-                  : "Upload a PDF to enable the chat. Once processed you can ask contextual questions."}
-              </p>
-            </div>
-          )}
-          {messages.map((m) => (
-            <MessageBubble key={m.id} role={m.role} content={m.content} />
-          ))}
-          {isLoading && (
-            <div className="flex justify-start">
-              <div className="text-[0.65rem] text-gray-600 px-3 py-1 rounded-md bg-gray-100 border border-gray-200">
-                Thinking…
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="flex-shrink-0 bg-gray-50 px-4 md:px-6 py-3">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSend();
-          }}
-        >
-          <div className="flex items-center gap-3">
-            <div className="flex-1 relative">
-              <textarea
-                ref={textareaRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
-                rows={1}
-                placeholder={
-                  documentId
-                    ? "Ask a question about your document..."
-                    : "Upload a document to enable chat..."
-                }
-                disabled={!documentId || isLoading}
-                className="w-full resize-none rounded-lg bg-white border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={!documentId || !input.trim() || isLoading}
-              className="px-4 py-3 bg-brand-600 text-white rounded-lg hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {isLoading ? "..." : "Send"}
-            </button>
-          </div>
-          <p className="mt-1 text-[0.55rem] uppercase tracking-wide text-neutral-500">
-            Enter to send • Shift+Enter for newline
+        {messages.map((m) => (
+          <MessageBubble key={m.id} role={m.role} content={m.content} />
+        ))}
+        {messages.length === 0 && (
+          <p className="text-xs text-neutral-500">
+            {documentId
+              ? "Start chatting about the uploaded document."
+              : "Upload a PDF to enable the chat. Once processed you can ask contextual questions."}
           </p>
-        </form>
+        )}
+        {isLoading && (
+          <div className="flex justify-start">
+            <div className="text-[0.65rem] text-neutral-500 px-3 py-1 rounded-md bg-neutral-800/60">
+              Thinking…
+            </div>
+          </div>
+        )}
       </div>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleSend();
+        }}
+        className="mt-4"
+      >
+        <div className="flex items-end gap-2">
+          <div className="flex-1 relative">
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+              rows={2}
+              placeholder={
+                documentId
+                  ? "Ask a question about your document..."
+                  : "Upload a document to enable chat..."
+              }
+              disabled={!documentId || isLoading}
+              className="w-full resize-none rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 scrollbar-thin disabled:opacity-50 disabled:cursor-not-allowed"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={!documentId || !input.trim() || isLoading}
+            className="btn disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoading ? "..." : "Send"}
+          </button>
+        </div>
+        <p className="mt-1 text-[0.55rem] uppercase tracking-wide text-neutral-500">
+          Enter to send • Shift+Enter for newline
+        </p>
+      </form>
     </div>
   );
 }

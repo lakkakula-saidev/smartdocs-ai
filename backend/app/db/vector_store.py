@@ -630,8 +630,7 @@ class DocumentRegistry:
         file_size_bytes: Optional[int] = None,
         text_size_bytes: int = 0,
         chunk_count: int = 0,
-        processing_time_ms: Optional[int] = None,
-        display_name: Optional[str] = None
+        processing_time_ms: Optional[int] = None
     ) -> DocumentInfo:
         """
         Register a new document in the registry.
@@ -643,7 +642,6 @@ class DocumentRegistry:
             text_size_bytes: Extracted text size
             chunk_count: Number of text chunks
             processing_time_ms: Processing time
-            display_name: Cleaned filename for display
             
         Returns:
             Document information object
@@ -659,8 +657,7 @@ class DocumentRegistry:
             status=DocumentStatus.READY,
             collection_name=collection_name,
             processing_time_ms=processing_time_ms,
-            created_at=datetime.utcnow(),
-            display_name=display_name
+            created_at=datetime.utcnow()
         )
         
         self._documents[document_id] = doc_info
@@ -671,8 +668,7 @@ class DocumentRegistry:
             extra={
                 "document_id": document_id,
                 "uploaded_filename": filename,
-                "chunk_count": chunk_count,
-                "display_name": display_name
+                "chunk_count": chunk_count
             }
         )
         
@@ -750,41 +746,6 @@ class DocumentRegistry:
         
         self.logger.info(f"Deleted document {document_id}")
         return deleted
-    
-    async def rename_document(self, document_id: str, new_display_name: str) -> DocumentInfo:
-        """
-        Rename document's display name.
-        
-        Args:
-            document_id: Document identifier
-            new_display_name: New display name for the document
-            
-        Returns:
-            Updated document information
-            
-        Raises:
-            DocumentNotFoundError: If document not found
-        """
-        if document_id not in self._documents:
-            raise DocumentNotFoundError(document_id)
-        
-        # Get current document info
-        doc_info = self._documents[document_id]
-        old_display_name = doc_info.display_name or doc_info.get_display_name()
-        
-        # Update display name
-        doc_info.display_name = new_display_name
-        
-        self.logger.info(
-            f"Renamed document",
-            extra={
-                "document_id": document_id,
-                "old_display_name": old_display_name,
-                "new_display_name": new_display_name
-            }
-        )
-        
-        return doc_info
     
     async def get_retriever(
         self,

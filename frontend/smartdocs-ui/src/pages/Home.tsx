@@ -1,14 +1,9 @@
 import { useState } from "react";
 import { UploadDocument } from "../components/UploadDocument";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 export function Home() {
   const [docId, setDocId] = useState<string | null>(null);
-  const navigate = useNavigate();
-
-  const handleGoToChat = (documentId: string) => {
-    navigate("/chat", { state: { docId: documentId } });
-  };
 
   return (
     <div className="space-y-20 fade-in">
@@ -50,10 +45,7 @@ export function Home() {
           {/* Upload Panel */}
           <div className="grid md:grid-cols-[1fr_minmax(0,420px)] gap-10 items-start slide-up">
             <div className="space-y-10">
-              <UploadDocument
-                onUploaded={setDocId}
-                onGoToChat={handleGoToChat}
-              />
+              <UploadDocument onUploaded={setDocId} />
 
               {docId && (
                 <div className="text-xs text-brand-300 flex items-center gap-2">
