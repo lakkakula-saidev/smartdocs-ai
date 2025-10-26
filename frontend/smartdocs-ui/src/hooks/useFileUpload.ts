@@ -37,7 +37,6 @@ export interface UseFileUpload {
   file: File | null;
   pending: PendingMeta | null;
   successId: string | null;
-  successDisplayName: string | null;
   error: string;
   dragActive: boolean;
 
@@ -93,9 +92,6 @@ export function useFileUpload(
   const [error, setError] = useState("");
   const [pending, setPending] = useState<PendingMeta | null>(null);
   const [successId, setSuccessId] = useState<string | null>(null);
-  const [successDisplayName, setSuccessDisplayName] = useState<string | null>(
-    null
-  );
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   // Track timeouts for simulated progress to ensure cleanup
@@ -109,7 +105,6 @@ export function useFileUpload(
     setPending(null);
     setError("");
     setSuccessId(null);
-    setSuccessDisplayName(null);
   }, []);
 
   useEffect(
@@ -149,7 +144,6 @@ export function useFileUpload(
 
       setError("");
       setSuccessId(null);
-      setSuccessDisplayName(null);
       setFile(f);
     },
     [maxSizeMB]
@@ -201,7 +195,6 @@ export function useFileUpload(
     abortedRef.current = false;
     setError("");
     setSuccessId(null);
-    setSuccessDisplayName(null);
 
     // File already validated during selection
     setPending({ progress: 0 });
@@ -227,7 +220,7 @@ export function useFileUpload(
     timeoutsRef.current.push(initialId);
 
     try {
-      const result: UploadResult = await uploadFile(file, (fraction) => {
+      const { id }: UploadResult = await uploadFile(file, (fraction) => {
         if (abortedRef.current) return;
         gotProgress = true;
         // Real progress arrived -> clear simulated timers
@@ -242,9 +235,8 @@ export function useFileUpload(
       setPending((p) => (p ? { ...p, progress: 1 } : p));
       const finalizeId = window.setTimeout(() => {
         if (abortedRef.current) return;
-        setSuccessId(result.id);
-        setSuccessDisplayName(result.displayName);
-        onUploaded?.(result.id);
+        setSuccessId(id);
+        onUploaded?.(id);
         setPending(null); // not "finalizing" anymore; success state stable
       }, 120);
       timeoutsRef.current.push(finalizeId);
@@ -270,7 +262,6 @@ export function useFileUpload(
     file,
     pending,
     successId,
-    successDisplayName,
     error,
     dragActive,
     progress,

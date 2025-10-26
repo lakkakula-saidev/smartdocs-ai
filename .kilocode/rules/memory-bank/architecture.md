@@ -45,7 +45,7 @@ SmartDocs AI follows a modern full-stack architecture with clear separation betw
 #### State Management
 - React hooks for local component state
 - URL state for document context passing between pages
-- Zustand store with per-document chat histories persisted to localStorage via persist middleware
+- No global state management (suitable for current scope)
 
 #### API Integration
 - **API Client** ([`api.ts`](../../../frontend/smartdocs-ui/src/api/api.ts:1)):
@@ -128,7 +128,7 @@ LLM Processing → Response Enhancement → Markdown Formatting → Response
 ### Chat Interaction Path
 1. [`ChatBox.tsx`](../../../frontend/smartdocs-ui/src/components/ChatBox.tsx:1) → [`api.ts:askQuestion`](../../../frontend/smartdocs-ui/src/api/api.ts:135) → [`main.py:ask`](../../../backend/main.py:440)
 2. [`run_retrieval_qa()`](../../../backend/main.py:222) → [`enhance_markdown()`](../../../backend/main.py:344)
-3. Response rendering in [`MessageBubble.tsx`](../../../frontend/smartdocs-ui/src/components/MessageBubble.tsx:1) with chat histories restored from localStorage
+3. Response rendering in [`MessageBubble.tsx`](../../../frontend/smartdocs-ui/src/components/MessageBubble.tsx:1)
 
 ## Security Considerations
 
