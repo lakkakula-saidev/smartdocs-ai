@@ -272,15 +272,21 @@ class ChromaVectorStore(VectorStoreInterface):
         
         with ExceptionContext(VectorStoreError, f"Failed to load ChromaDB collection for document {document_id}"):
             # Load embeddings (would need to be passed or configured)
-            from ..config import require_openai_api_key
+            from ..config import get_settings
             
             try:
                 from langchain_openai import OpenAIEmbeddings
             except ImportError:
                 from langchain.embeddings.openai import OpenAIEmbeddings
             
-            api_key = require_openai_api_key()
-            embeddings = OpenAIEmbeddings(openai_api_key=api_key)
+            settings = get_settings()
+            if not settings.has_openai_key:
+                raise VectorStoreError(
+                    message="OpenAI API key not configured for loading collection",
+                    error_code="OPENAI_API_KEY_MISSING"
+                )
+            
+            embeddings = OpenAIEmbeddings(openai_api_key=settings.openai_api_key)
             
             # Load existing collection
             vectorstore = self._chroma_class(

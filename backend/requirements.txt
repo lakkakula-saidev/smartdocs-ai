@@ -5,6 +5,7 @@ pydantic-settings
 langchain
 langchain-openai
 langchain-chroma
+langchain-text-splitters
 openai
 chromadb
 pypdf
