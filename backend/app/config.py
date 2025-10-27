@@ -159,6 +159,13 @@ class Settings(BaseSettings):
         le=20,
         description="Number of chunks to retrieve for QA"
     )
+    max_context_chars: int = Field(
+        default=8000,
+        env="MAX_CONTEXT_CHARS",
+        ge=1000,
+        le=32000,
+        description="Maximum context size in characters for fallback RAG"
+    )
     
     # === File Upload Configuration ===
     max_upload_size_mb: int = Field(
@@ -393,9 +400,8 @@ def require_openai_api_key() -> str:
     """
     from fastapi import HTTPException, status
     
-    # Reload settings to pick up any new environment changes
+    # Use existing settings instance (avoid forced reload for performance)
     global _settings
-    _settings = None  # Force reload
     
     try:
         settings = get_settings()
