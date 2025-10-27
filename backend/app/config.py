@@ -91,7 +91,12 @@ class Settings(BaseSettings):
     
     # === CORS Configuration ===
     cors_origins: List[str] = Field(
-        default=["*"],
+        default=[
+            "*",
+            "http://localhost:3000",
+            "http://localhost:5173",
+            "https://lakkakula-saidev.github.io"
+        ],
         env="CORS_ORIGINS",
         description="Allowed CORS origins (comma-separated)"
     )
