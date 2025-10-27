@@ -7,10 +7,9 @@ management using retrieval-augmented generation (RAG).
 """
 
 import time
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.responses import JSONResponse
 
 from ..config import Settings, get_settings
 from ..exceptions import (
@@ -265,7 +264,7 @@ async def ask_question(
             extra={
                 "document_id": request.document_id,
                 "error_code": e.error_code,
-                "message": e.message
+                "error_message": e.message
             },
             exc_info=True
         )

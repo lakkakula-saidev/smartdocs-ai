@@ -10,7 +10,6 @@ import time
 from typing import List
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
-from fastapi.responses import JSONResponse
 
 from ..config import Settings, get_settings
 from ..exceptions import (

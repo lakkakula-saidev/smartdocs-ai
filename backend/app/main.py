@@ -281,19 +281,6 @@ def create_app(settings: Settings = None) -> FastAPI:
         return app
 
 
-def get_application() -> FastAPI:
-    """
-    Get the configured FastAPI application instance.
-    
-    This function provides a single point of access to the application
-    and can be used by ASGI servers like Uvicorn.
-    
-    Returns:
-        Configured FastAPI application
-    """
-    return create_app()
-
-
 # Application instance cache for module-level access
 _app_cache: FastAPI = None
 

@@ -284,29 +284,15 @@ class ChatService:
         ):
             # Import LangChain components
             try:
-                # Try modern langchain-community first
-                try:
-                    from langchain_community.chains import RetrievalQA
-                except ImportError:
-                    # Fallback to legacy path
-                    from langchain.chains import RetrievalQA
-                    
-                try:
-                    from langchain_openai import ChatOpenAI
-                except ImportError:
-                    try:
-                        from langchain.chat_models import ChatOpenAI
-                    except ImportError as e:
-                        raise AIServiceError(
-                            message="ChatOpenAI not available",
-                            error_code="CHATOPENAI_NOT_AVAILABLE",
-                            details={"required_package": "langchain-openai"}
-                        ) from e
+                from langchain_openai import ChatOpenAI
+                from langchain.chains import create_retrieval_chain
+                from langchain.chains.combine_documents import create_stuff_documents_chain
+                from langchain_core.prompts import ChatPromptTemplate
             except ImportError as e:
                 raise AIServiceError(
                     message="LangChain components not available",
                     error_code="LANGCHAIN_NOT_AVAILABLE",
-                    details={"error": str(e)}
+                    details={"required_package": "langchain-openai, langchain-core"}
                 ) from e
             
             # Get API key and create LLM
@@ -325,13 +311,17 @@ class ChatService:
                 k=self.settings.retrieval_k
             )
             
-            # Create QA chain
-            chain = RetrievalQA.from_chain_type(
-                llm=llm,
-                retriever=retriever,
-                chain_type="stuff",
-                return_source_documents=False
-            )
+            # Create modern LangChain retrieval chain
+            prompt = ChatPromptTemplate.from_messages([
+                ("system", "You are a helpful assistant that answers questions based on the provided context. "
+                          "Use the following pieces of context to answer the user's question. "
+                          "If you don't know the answer based on the context, say that you don't know."),
+                ("user", "Context: {context}\n\nQuestion: {input}")
+            ])
+            
+            # Create document chain and retrieval chain
+            document_chain = create_stuff_documents_chain(llm, prompt)
+            chain = create_retrieval_chain(retriever, document_chain)
             
             self.logger.debug(
                 f"Generating AI response",
@@ -345,10 +335,10 @@ class ChatService:
             )
             
             # Generate response
-            result = chain.invoke({"query": query})
+            result = chain.invoke({"input": query})
             
-            # Extract answer from result (handle different LangChain versions)
-            answer = result.get("result") or result.get("output_text") or ""
+            # Extract answer from modern LangChain result
+            answer = result.get("answer") or ""
             
             if not answer.strip():
                 raise AIServiceError(
@@ -516,17 +506,10 @@ class ChatService:
         try:
             # Test LangChain dependencies
             try:
-                # Try modern langchain-community first
-                try:
-                    from langchain_community.chains import RetrievalQA
-                except ImportError:
-                    # Fallback to legacy path
-                    from langchain.chains import RetrievalQA
-                    
-                try:
-                    from langchain_openai import ChatOpenAI
-                except ImportError:
-                    from langchain.chat_models import ChatOpenAI
+                from langchain_openai import ChatOpenAI
+                from langchain.chains import create_retrieval_chain
+                from langchain.chains.combine_documents import create_stuff_documents_chain
+                from langchain_core.prompts import ChatPromptTemplate
                 results["tests"]["langchain_dependencies"] = "passed"
             except ImportError as e:
                 results["tests"]["langchain_dependencies"] = f"failed: {str(e)}"

@@ -5,7 +5,7 @@ import axios, { AxiosError, type AxiosRequestConfig } from "axios";
  * - Uses VITE_API_URL if set and non-empty.
  * - Falls back to localhost:8000 (FastAPI default in this repo).
  */
-const FALLBACK_BASE = "http://0.0.0.0:800";
+const FALLBACK_BASE = "http://0.0.0.0:8000";
 const envBase = (import.meta.env.VITE_API_URL as string | undefined)?.trim();
 const baseURL = envBase && envBase.length ? envBase : FALLBACK_BASE;
 

@@ -10,9 +10,8 @@ from enum import Enum
 from typing import Optional, List
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
-from pydantic import field_validator
 from dotenv import load_dotenv, find_dotenv
 
 
