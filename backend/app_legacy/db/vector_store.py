@@ -170,20 +170,29 @@ class ChromaVectorStore(VectorStoreInterface):
     def _ensure_chroma_available(self) -> None:
         """Ensure ChromaDB dependencies are available."""
         try:
-            # Try modern package first
+            # Try LangChain integration first for existing compatibility
             from langchain_chroma import Chroma
             self._chroma_class = Chroma
+            self.logger.info("Using LangChain ChromaDB integration")
         except ImportError:
             try:
                 # Fallback to legacy path
                 from langchain_community.vectorstores import Chroma
                 self._chroma_class = Chroma
-            except ImportError as e:
-                raise ConfigurationError(
-                    message="ChromaDB not available. Install with: pip install langchain-chroma",
-                    error_code="CHROMA_NOT_AVAILABLE",
-                    details={"package": "langchain-chroma"}
-                ) from e
+                self.logger.info("Using legacy LangChain ChromaDB integration")
+            except ImportError:
+                try:
+                    # Use direct ChromaDB without LangChain wrapper
+                    import chromadb
+                    self._chromadb = chromadb
+                    self._chroma_class = None
+                    self.logger.info("Using direct ChromaDB integration (no LangChain)")
+                except ImportError as e:
+                    raise ConfigurationError(
+                        message="ChromaDB not available. Install with: pip install chromadb",
+                        error_code="CHROMA_NOT_AVAILABLE",
+                        details={"package": "chromadb"}
+                    ) from e
     
     def _get_persist_directory(self, document_id: str) -> str:
         """Get persistence directory for document."""
@@ -271,22 +280,17 @@ class ChromaVectorStore(VectorStoreInterface):
             return
         
         with ExceptionContext(VectorStoreError, f"Failed to load ChromaDB collection for document {document_id}"):
-            # Load embeddings (would need to be passed or configured)
-            from ..config import get_settings
-            
-            try:
-                from langchain_openai import OpenAIEmbeddings
-            except ImportError:
-                from langchain.embeddings.openai import OpenAIEmbeddings
+            # Load embeddings using compatibility layer
+            from langchain_compat import get_openai_embeddings
             
             settings = get_settings()
-            if not settings.has_openai_key:
+            if not hasattr(settings, 'openai_api_key') or not settings.openai_api_key:
                 raise VectorStoreError(
                     message="OpenAI API key not configured for loading collection",
                     error_code="OPENAI_API_KEY_MISSING"
                 )
             
-            embeddings = OpenAIEmbeddings(openai_api_key=settings.openai_api_key)
+            embeddings = get_openai_embeddings(settings.openai_api_key)
             
             # Load existing collection
             vectorstore = self._chroma_class(
@@ -504,16 +508,12 @@ class PineconeVectorStore(VectorStoreInterface):
         namespace = self._collections[document_id]
         
         with ExceptionContext(VectorStoreError, f"Failed to create Pinecone retriever for document {document_id}"):
-            # Create embeddings instance
+            # Create embeddings instance using compatibility layer
             from ..config import require_openai_api_key
-            
-            try:
-                from langchain_openai import OpenAIEmbeddings
-            except ImportError:
-                from langchain.embeddings.openai import OpenAIEmbeddings
+            from langchain_compat import get_openai_embeddings
             
             api_key = require_openai_api_key()
-            embeddings = OpenAIEmbeddings(openai_api_key=api_key)
+            embeddings = get_openai_embeddings(api_key)
             
             # Create vector store instance
             vectorstore = self._langchain_pinecone(

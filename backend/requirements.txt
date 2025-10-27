@@ -1,24 +1,38 @@
-# Core FastAPI framework
-fastapi[standard]
-uvicorn
-python-multipart
-pydantic-settings
-python-dotenv
+# Core FastAPI framework with all standard features
+fastapi[standard]>=0.104.1
 
-# LangChain 0.2.x family (compatible versions)
-langchain==0.2.16
-langchain-core==0.2.34
-langchain-openai==0.1.17
-langchain-chroma==0.1.3
-langchain-community==0.2.12
-langchain-text-splitters==0.2.2
+# ASGI server for production deployment
+uvicorn[standard]>=0.24.0
 
-# Vector database
-chromadb==0.5.11
+# File upload and form data handling
+python-multipart>=0.0.6
 
-# OpenAI integration
-openai==1.51.0
-tiktoken==0.7.0
+# Configuration management
+pydantic-settings>=2.0.3
+python-dotenv>=1.0.0
 
-# Document processing
-pypdf==4.2.0
+# OpenAI API client (direct integration)
+openai>=1.51.0
+
+# Token counting for OpenAI models
+tiktoken>=0.5.0
+
+# Vector database (direct ChromaDB without LangChain wrappers)
+chromadb>=0.5.11
+
+# PDF text extraction
+pypdf>=4.2.0
+
+# HTTP client for API calls (if needed for external services)
+httpx>=0.25.0
+
+# JSON Web Token support (for future authentication)
+# pyjwt>=2.8.0
+
+# Database drivers (for future persistence)
+# psycopg2-binary>=2.9.7  # PostgreSQL
+# sqlite3 is built into Python
+
+# Development and testing utilities
+# pytest>=7.4.3
+# pytest-asyncio>=0.21.1
