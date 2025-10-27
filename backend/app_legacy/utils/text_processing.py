@@ -30,7 +30,7 @@ AUX_OR_VERB = {
 
 def split_text_into_chunks(text: str, chunk_size: int = None, chunk_overlap: int = None) -> List[str]:
     """
-    Split text into chunks using RecursiveCharacterTextSplitter.
+    Split text into chunks using direct implementation (no LangChain dependency).
     
     Args:
         text: Text to split
@@ -39,15 +39,9 @@ def split_text_into_chunks(text: str, chunk_size: int = None, chunk_overlap: int
         
     Returns:
         List of text chunks
-        
-    Raises:
-        ImportError: If langchain is not installed
     """
-    try:
-        from langchain.text_splitter import RecursiveCharacterTextSplitter
-    except ImportError as e:
-        logger.error("langchain not installed", extra={"error": str(e)})
-        raise ImportError("langchain not installed. Install with: pip install langchain") from e
+    # Import direct AI integration
+    from ai import get_text_chunker, TextChunk
     
     settings = get_settings()
     
@@ -55,20 +49,21 @@ def split_text_into_chunks(text: str, chunk_size: int = None, chunk_overlap: int
     chunk_size = chunk_size or settings.chunk_size
     chunk_overlap = chunk_overlap or settings.chunk_overlap
     
-    logger.debug(f"Splitting text into chunks", 
+    logger.debug(f"Splitting text into chunks",
                 extra={"text_length": len(text), "chunk_size": chunk_size, "chunk_overlap": chunk_overlap})
     
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=chunk_size,
-        chunk_overlap=chunk_overlap,
-        separators=["\n\n", "\n", " ", ""]
-    )
+    # Use our direct text chunker
+    chunker = get_text_chunker()
+    chunker.chunk_size = chunk_size
+    chunker.chunk_overlap = chunk_overlap
     
-    # Create documents and extract text
-    docs = splitter.create_documents([text])
-    chunks = [doc.page_content for doc in docs]
+    # Get text chunks
+    text_chunks = chunker.chunk_text(text)
     
-    logger.info(f"Split text into {len(chunks)} chunks", 
+    # Extract text content (maintain backward compatibility)
+    chunks = [chunk.content for chunk in text_chunks]
+    
+    logger.info(f"Split text into {len(chunks)} chunks",
                extra={"original_length": len(text), "num_chunks": len(chunks),
                      "avg_chunk_size": sum(len(chunk) for chunk in chunks) // len(chunks) if chunks else 0})
     
@@ -302,25 +297,24 @@ def truncate_text(text: str, max_length: int = 500, ellipsis: str = "...") -> st
 
 def count_tokens_estimate(text: str) -> int:
     """
-    Rough estimate of token count for text.
+    Count tokens in text using our AI integration module.
     
-    Uses simple heuristic: ~4 characters per token for English text.
-    For more accurate counting, use tiktoken when available.
+    Uses tiktoken when available, falls back to estimation otherwise.
     
     Args:
         text: Text to count tokens for
         
     Returns:
-        Estimated token count
+        Token count
     """
     if not text:
         return 0
     
-    # Try to use tiktoken if available
+    # Use our OpenAI client's token counting method
     try:
-        import tiktoken
-        encoding = tiktoken.get_encoding("cl100k_base")  # GPT-4 encoding
-        return len(encoding.encode(text))
+        from ai import get_openai_client
+        client = get_openai_client()
+        return client.count_tokens(text)
     except ImportError:
         # Fallback to simple estimation
         return len(text) // 4

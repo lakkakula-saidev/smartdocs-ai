@@ -1,23 +1,31 @@
-# Minimal Docker ignore (post-cleanup)
+# SmartDocs AI Backend Docker Ignore - Simplified Architecture
 
-# Python env & caches
+# Python environment & caches
 .venv/
+venv/
 __pycache__/
 *.py[cod]
+*.pyo
+*.pyd
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
 
-# VCS
+# Version control
 .git/
 .github/
+.gitignore
 
-# Tests & coverage (removed from repo)
+# Development & testing files
 test_*.py
 *_test.py
 .pytest_cache/
 coverage.xml
 .coverage
 htmlcov/
+.tox/
 
-# Local env / secrets
+# Environment & secrets
 .env
 .env.*
 !.env.example
@@ -25,8 +33,9 @@ htmlcov/
 # Build artifacts
 dist/
 build/
+*.egg-info/
 
-# Editors / OS noise
+# Development tools & editors
 .vscode/
 .idea/
 .DS_Store
@@ -35,31 +44,48 @@ Thumbs.db
 *.swo
 *~
 
-# Logs / temp
+# Logs & temporary files
 *.log
+logs/
 tmp/
 temp/
 *.tmp
 
-# Vector store runtime data (mount as volume instead)
-# Ignore all known historical and current locations plus any nested occurrences
+# Vector store runtime data (mount as volume in production)
 vectorstores/
 backend/vectorstores/
 backend/backend/vectorstores/
 **/vectorstores/
 
-# Frontend (not needed for backend image build if building separately)
+# Old architecture files (archived)
+app_legacy/
+app/
+
+# Development documentation & summaries
+AI_INTEGRATION_SUMMARY.md
+ARCHITECTURE_SIMPLIFICATION_*.md
+fix_plan.md
+
+# Frontend (separate build process)
 frontend/
 
-# Node modules (if root context ever used)
+# Node.js (if accidentally present)
 node_modules/
+package-lock.json
+yarn.lock
 
-# Archives
+# Archives & backups
 *.zip
 *.tar.gz
 *.rar
 *.7z
-
-# Misc
 *.bak
 *.backup
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+*.sublime-*
+.vscode/settings.json

@@ -44,7 +44,7 @@ COPY --from=base /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.
 COPY --from=base /usr/local/bin /usr/local/bin
 
 # Create necessary directories with proper permissions
-RUN mkdir -p /app/backend/vectorstores \
+RUN mkdir -p /app/vectorstores \
     && mkdir -p /app/logs \
     && chown -R appuser:appuser /app
 
@@ -53,7 +53,7 @@ COPY --chown=appuser:appuser . .
 
 # Set proper file permissions
 RUN chmod -R 755 /app \
-    && chmod -R 777 /app/backend/vectorstores \
+    && chmod -R 777 /app/vectorstores \
     && chmod -R 755 /app/logs
 
 # Switch to non-root user
@@ -68,7 +68,7 @@ ENV PYTHONUNBUFFERED=1 \
     PORT=8000 \
     LOG_LEVEL=INFO \
     LOG_FORMAT=structured \
-    VECTOR_STORE_PERSIST_DIR=/app/backend/vectorstores
+    VECTOR_STORE_PERSIST_DIR=/app/vectorstores
 
 # Expose the application port
 EXPOSE 8000
@@ -78,6 +78,6 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import urllib.request,sys; urllib.request.urlopen('http://localhost:8000/health', timeout=8); print('ok')" || exit 1
 
 # Use Uvicorn for production with proper configuration (single worker is fine for minimal portfolio)
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--log-level", "info", "--access-log"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--log-level", "info", "--access-log"]
 
 # (Removed separate development stage to ensure production image is final for Railway)
