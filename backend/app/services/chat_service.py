@@ -245,7 +245,8 @@ class ChatService:
             self.logger.debug(f"Retrieving context chunks", extra={"query": query})
             
             # Use retriever to get relevant documents
-            chunks = retriever.get_relevant_documents(query)
+            # Use invoke() method for modern LangChain compatibility
+            chunks = retriever.invoke(query)
             
             self.logger.debug(
                 f"Context retrieval completed",
@@ -283,7 +284,13 @@ class ChatService:
         ):
             # Import LangChain components
             try:
-                from langchain.chains import RetrievalQA
+                # Try modern langchain-community first
+                try:
+                    from langchain_community.chains import RetrievalQA
+                except ImportError:
+                    # Fallback to legacy path
+                    from langchain.chains import RetrievalQA
+                    
                 try:
                     from langchain_openai import ChatOpenAI
                 except ImportError:
@@ -509,7 +516,13 @@ class ChatService:
         try:
             # Test LangChain dependencies
             try:
-                from langchain.chains import RetrievalQA
+                # Try modern langchain-community first
+                try:
+                    from langchain_community.chains import RetrievalQA
+                except ImportError:
+                    # Fallback to legacy path
+                    from langchain.chains import RetrievalQA
+                    
                 try:
                     from langchain_openai import ChatOpenAI
                 except ImportError:
@@ -517,7 +530,7 @@ class ChatService:
                 results["tests"]["langchain_dependencies"] = "passed"
             except ImportError as e:
                 results["tests"]["langchain_dependencies"] = f"failed: {str(e)}"
-                results["status"] = "unhealthy"
+                results["status"] = "degraded"
             
             # Test OpenAI API key
             try:
