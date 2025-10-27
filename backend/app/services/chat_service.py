@@ -476,3 +476,76 @@ class ChatService:
         ]
         
         return filtered_suggestions[:3]  # Return top 3 suggestions
+    
+    async def validate_document_access(self, document_id: str) -> None:
+        """
+        Validate that a document exists and is accessible.
+        
+        Args:
+            document_id: Document identifier to validate
+            
+        Raises:
+            DocumentNotFoundError: If document not found or inaccessible
+        """
+        await self._validate_document_exists(document_id)
+    
+    async def health_check(self) -> Dict[str, Any]:
+        """
+        Perform health check on chat service components.
+        
+        Returns:
+            Health check results dictionary
+        """
+        results = {
+            "status": "healthy",
+            "tests": {
+                "service_initialization": "passed",
+                "openai_connectivity": "unknown",
+                "langchain_dependencies": "unknown",
+                "vector_store_access": "unknown"
+            }
+        }
+        
+        try:
+            # Test LangChain dependencies
+            try:
+                from langchain.chains import RetrievalQA
+                try:
+                    from langchain_openai import ChatOpenAI
+                except ImportError:
+                    from langchain.chat_models import ChatOpenAI
+                results["tests"]["langchain_dependencies"] = "passed"
+            except ImportError as e:
+                results["tests"]["langchain_dependencies"] = f"failed: {str(e)}"
+                results["status"] = "unhealthy"
+            
+            # Test OpenAI API key
+            try:
+                from ..config import require_openai_api_key
+                api_key = require_openai_api_key()
+                if api_key and len(api_key) > 20:  # Basic validation
+                    results["tests"]["openai_connectivity"] = "passed"
+                else:
+                    results["tests"]["openai_connectivity"] = "failed: invalid API key"
+                    results["status"] = "unhealthy"
+            except Exception as e:
+                results["tests"]["openai_connectivity"] = f"failed: {str(e)}"
+                results["status"] = "unhealthy"
+            
+            # Test vector store access
+            try:
+                registry_health = await self.document_registry.health_check()
+                if registry_health.get("status") == "healthy":
+                    results["tests"]["vector_store_access"] = "passed"
+                else:
+                    results["tests"]["vector_store_access"] = "failed: registry unhealthy"
+                    results["status"] = "degraded"
+            except Exception as e:
+                results["tests"]["vector_store_access"] = f"failed: {str(e)}"
+                results["status"] = "unhealthy"
+                
+        except Exception as e:
+            results["status"] = "unhealthy"
+            results["error"] = str(e)
+        
+        return results
