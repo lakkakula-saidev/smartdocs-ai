@@ -55,6 +55,9 @@ class ChatService:
             "total_response_time_ms": 0,
             "last_query_at": None
         }
+        
+        # Cache for chain components (avoid repeated imports)
+        self._chain_components = None
     
     async def ask_question(self, request: AskRequest) -> AskResponse:
         """
@@ -259,17 +262,17 @@ class ChatService:
             return chunks
     
     async def _generate_response(
-        self, 
-        query: str, 
+        self,
+        query: str,
         context_chunks: List[Any],
         document_id: str
     ) -> str:
         """
-        Generate AI response using LLM.
+        Generate AI response using LLM with fallback support.
         
         Args:
             query: User query
-            context_chunks: Retrieved context chunks
+            context_chunks: Retrieved context chunks (used by fallback path)
             document_id: Document identifier for logging
             
         Returns:
@@ -282,18 +285,191 @@ class ChatService:
             AIServiceError,
             f"Failed to generate AI response for document {document_id}"
         ):
-            # Import LangChain components
+            # Try advanced chain imports first, fallback to manual RAG if unavailable
+            chain_components = self._load_chain_components()
+            
+            if chain_components["has_chains"]:
+                return await self._generate_with_chains(query, document_id, context_chunks)
+            else:
+                self.logger.warning(
+                    "LangChain chains unavailable, using fallback RAG",
+                    extra={
+                        "failure_stage": "chain_import",
+                        "exception_type": chain_components["error_type"],
+                        "document_id": document_id
+                    }
+                )
+                return await self._generate_with_fallback_rag(query, context_chunks, document_id)
+    
+    def _load_chain_components(self) -> Dict[str, Any]:
+        """
+        Load LangChain components with fallback detection and caching.
+        
+        Returns:
+            Dictionary with component availability and error info
+        """
+        if self._chain_components is not None:
+            return self._chain_components
+            
+        try:
+            from langchain_openai import ChatOpenAI
+            from langchain.chains import create_retrieval_chain
+            from langchain.chains.combine_documents import create_stuff_documents_chain
+            from langchain_core.prompts import ChatPromptTemplate
+            self._chain_components = {
+                "has_chains": True,
+                "ChatOpenAI": ChatOpenAI,
+                "create_retrieval_chain": create_retrieval_chain,
+                "create_stuff_documents_chain": create_stuff_documents_chain,
+                "ChatPromptTemplate": ChatPromptTemplate,
+                "error_type": None
+            }
+        except ImportError as e:
+            # Try fallback imports
             try:
                 from langchain_openai import ChatOpenAI
-                from langchain.chains import create_retrieval_chain
-                from langchain.chains.combine_documents import create_stuff_documents_chain
                 from langchain_core.prompts import ChatPromptTemplate
-            except ImportError as e:
+                self._chain_components = {
+                    "has_chains": False,
+                    "ChatOpenAI": ChatOpenAI,
+                    "ChatPromptTemplate": ChatPromptTemplate,
+                    "error_type": type(e).__name__
+                }
+            except ImportError as fallback_e:
                 raise AIServiceError(
-                    message="LangChain components not available",
-                    error_code="LANGCHAIN_NOT_AVAILABLE",
-                    details={"required_package": "langchain-openai, langchain-core"}
-                ) from e
+                    message="Essential LangChain components unavailable",
+                    error_code="LANGCHAIN_CORE_MISSING",
+                    details={
+                        "required_packages": "langchain-openai, langchain-core",
+                        "chain_error": str(e),
+                        "fallback_error": str(fallback_e)
+                    }
+                ) from fallback_e
+        
+        return self._chain_components
+    
+    async def _generate_with_chains(
+        self,
+        query: str,
+        document_id: str,
+        context_chunks: List[Any]
+    ) -> str:
+        """
+        Generate response using advanced LangChain retrieval chains.
+        
+        Args:
+            query: User query
+            document_id: Document identifier
+            context_chunks: Retrieved context chunks for logging
+            
+        Returns:
+            Generated response text
+        """
+        components = self._load_chain_components()
+        ChatOpenAI = components["ChatOpenAI"]
+        create_retrieval_chain = components["create_retrieval_chain"]
+        create_stuff_documents_chain = components["create_stuff_documents_chain"]
+        ChatPromptTemplate = components["ChatPromptTemplate"]
+        
+        # Get API key and create LLM
+        from ..config import require_openai_api_key
+        api_key = require_openai_api_key()
+        
+        llm = ChatOpenAI(
+            temperature=self.settings.openai_temperature,
+            model_name=self.settings.openai_model,
+            openai_api_key=api_key
+        )
+        
+        # Get retriever for the document
+        retriever = await self.document_registry.get_retriever(
+            document_id=document_id,
+            k=self.settings.retrieval_k
+        )
+        
+        # Create standardized prompt template
+        prompt = self._create_standard_prompt_template(ChatPromptTemplate)
+        
+        # Create document chain and retrieval chain
+        document_chain = create_stuff_documents_chain(llm, prompt)
+        chain = create_retrieval_chain(retriever, document_chain)
+        
+        self.logger.debug(
+            f"Generating AI response with chains",
+            extra={
+                "document_id": document_id,
+                "query": query,
+                "model": self.settings.openai_model,
+                "temperature": self.settings.openai_temperature,
+                "context_chunks": len(context_chunks)
+            }
+        )
+        
+        # Generate response
+        result = chain.invoke({"input": query})
+        
+        # Extract answer from modern LangChain result
+        answer = result.get("answer") or ""
+        
+        if not answer.strip():
+            raise AIServiceError(
+                message="Empty response generated by LLM",
+                error_code="EMPTY_LLM_RESPONSE",
+                details={"query": query, "document_id": document_id}
+            )
+        
+        self.logger.debug(
+            f"AI response generated successfully with chains",
+            extra={
+                "document_id": document_id,
+                "response_length": len(answer),
+                "response_preview": answer[:200] + "..." if len(answer) > 200 else answer
+            }
+        )
+        
+        return answer.strip()
+    
+    def _create_standard_prompt_template(self, ChatPromptTemplate) -> Any:
+        """
+        Create standardized prompt template for consistent behavior.
+        
+        Args:
+            ChatPromptTemplate: LangChain ChatPromptTemplate class
+            
+        Returns:
+            Configured prompt template
+        """
+        return ChatPromptTemplate.from_messages([
+            ("system", "You are a helpful assistant that answers questions based on the provided context. "
+                      "Use the following pieces of context to answer the user's question. "
+                      "If you don't know the answer based on the context, say that you don't know."),
+            ("user", "Context: {context}\n\nQuestion: {input}")
+        ])
+    
+    async def _generate_with_fallback_rag(
+        self,
+        query: str,
+        context_chunks: List[Any],
+        document_id: str
+    ) -> str:
+        """
+        Manual RAG pipeline using provided context chunks when chains unavailable.
+        
+        Args:
+            query: User query
+            context_chunks: Retrieved context chunks to use
+            document_id: Document identifier for logging
+            
+        Returns:
+            Generated response text
+            
+        Raises:
+            AIServiceError: If fallback RAG fails
+        """
+        try:
+            components = self._load_chain_components()
+            ChatOpenAI = components["ChatOpenAI"]
+            ChatPromptTemplate = components["ChatPromptTemplate"]
             
             # Get API key and create LLM
             from ..config import require_openai_api_key
@@ -305,50 +481,50 @@ class ChatService:
                 openai_api_key=api_key
             )
             
-            # Get retriever for the document
-            retriever = await self.document_registry.get_retriever(
-                document_id=document_id,
-                k=self.settings.retrieval_k
-            )
+            # Build context string from provided chunks with configurable token limit
+            context_parts = []
+            total_chars = 0
+            max_context_chars = self.settings.max_context_chars
             
-            # Create modern LangChain retrieval chain
-            prompt = ChatPromptTemplate.from_messages([
-                ("system", "You are a helpful assistant that answers questions based on the provided context. "
-                          "Use the following pieces of context to answer the user's question. "
-                          "If you don't know the answer based on the context, say that you don't know."),
-                ("user", "Context: {context}\n\nQuestion: {input}")
-            ])
+            for chunk in context_chunks:
+                content = chunk.page_content if hasattr(chunk, 'page_content') else str(chunk)
+                content = content.strip()
+                if total_chars + len(content) > max_context_chars:
+                    break
+                context_parts.append(content)
+                total_chars += len(content)
             
-            # Create document chain and retrieval chain
-            document_chain = create_stuff_documents_chain(llm, prompt)
-            chain = create_retrieval_chain(retriever, document_chain)
+            context_text = "\n\n---\n\n".join(context_parts)
+            
+            # Create standardized prompt template
+            prompt = self._create_standard_prompt_template(ChatPromptTemplate)
             
             self.logger.debug(
-                f"Generating AI response",
+                f"Generating AI response with fallback RAG",
                 extra={
                     "document_id": document_id,
                     "query": query,
                     "model": self.settings.openai_model,
                     "temperature": self.settings.openai_temperature,
-                    "context_chunks": len(context_chunks)
+                    "context_chunks": len(context_parts),
+                    "context_chars": total_chars
                 }
             )
             
-            # Generate response
-            result = chain.invoke({"input": query})
+            # Generate response using direct LLM call with proper input structure
+            result = llm.invoke(prompt.format_messages(context=context_text, input=query))
             
-            # Extract answer from modern LangChain result
-            answer = result.get("answer") or ""
+            answer = result.content.strip() if hasattr(result, 'content') else str(result).strip()
             
-            if not answer.strip():
+            if not answer:
                 raise AIServiceError(
-                    message="Empty response generated by LLM",
-                    error_code="EMPTY_LLM_RESPONSE",
+                    message="Empty response from fallback RAG",
+                    error_code="PIPELINE_FALLBACK_FAILED",
                     details={"query": query, "document_id": document_id}
                 )
             
             self.logger.debug(
-                f"AI response generated successfully",
+                f"AI response generated successfully with fallback RAG",
                 extra={
                     "document_id": document_id,
                     "response_length": len(answer),
@@ -356,7 +532,24 @@ class ChatService:
                 }
             )
             
-            return answer.strip()
+            return answer
+            
+        except Exception as e:
+            self.logger.error(
+                "Fallback RAG pipeline failed",
+                extra={
+                    "failure_stage": "fallback_rag",
+                    "exception_type": type(e).__name__,
+                    "document_id": document_id,
+                    "query": query
+                },
+                exc_info=True
+            )
+            raise AIServiceError(
+                message="RAG fallback pipeline failed",
+                error_code="PIPELINE_FALLBACK_FAILED",
+                details={"original_error": str(e)}
+            ) from e
     
     async def _enhance_response(self, raw_answer: str) -> str:
         """

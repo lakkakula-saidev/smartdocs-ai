@@ -270,7 +270,8 @@ async def ask_question(
         )
         
         # Map processing errors to HTTP status codes
-        if "OPENAI" in e.error_code or "API" in e.error_code:
+        if ("OPENAI" in e.error_code or "API" in e.error_code or
+            e.error_code in ["LANGCHAIN_CORE_MISSING", "PIPELINE_FALLBACK_FAILED"]):
             status_code = status.HTTP_503_SERVICE_UNAVAILABLE
         elif "VALIDATION" in e.error_code:
             status_code = status.HTTP_400_BAD_REQUEST

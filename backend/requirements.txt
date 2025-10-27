@@ -1,14 +1,24 @@
+# Core FastAPI framework
 fastapi[standard]
 uvicorn
 python-multipart
 pydantic-settings
-langchain
-langchain-community
-langchain-openai
-langchain-chroma
-langchain-text-splitters
-openai
-chromadb
-pypdf
-tiktoken
 python-dotenv
+
+# LangChain 0.2.x family (compatible versions)
+langchain==0.2.16
+langchain-core==0.2.34
+langchain-openai==0.1.17
+langchain-chroma==0.1.3
+langchain-community==0.2.12
+langchain-text-splitters==0.2.2
+
+# Vector database
+chromadb==0.5.11
+
+# OpenAI integration
+openai==1.51.0
+tiktoken==0.7.0
+
+# Document processing
+pypdf==4.2.0
